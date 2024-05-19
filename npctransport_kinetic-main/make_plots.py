@@ -8,7 +8,14 @@ import matplotlib
 from matplotlib import pyplot as plt
 
 
-def plot_MW_stats_list(stats_list_by_force, TSs_by_force, free_to_complex_rates):
+def plot_MW_stats_list(stats_list_by_force: dict, TSs_by_force: dict, free_to_complex_rates: dict) -> None:
+    """
+
+    :param stats_list_by_force:
+    :param TSs_by_force:
+    :param free_to_complex_rates:
+    :return: None
+    """
     plot_from_sec = 0.1  # ts.bleach_start_time_sec + 1.0
     extras = [  #'GTP_N',
         #'GDP_N',
@@ -98,10 +105,16 @@ def plot_MW_stats_list(stats_list_by_force, TSs_by_force, free_to_complex_rates)
     lh.set_title('NLS strength')
 
 
-def get_compartment_nmol_stats(ts,
-                               stats,
-                               compartment,
-                               labels=['L', 'U']):
+def get_compartment_nmol_stats(ts: transport_simulation.TransportSimulation, stats: dict, compartment: str,
+                               labels: list = ['L', 'U']):
+    """
+    Consolidates mole values for all molecules in specific location into one np array
+    :param ts:
+    :param stats:
+    :param compartment: location of the tracked molecules (e.g. nucleus, cytoplasm, or NPC)
+    :param labels:
+    :return:
+    """
     assert (compartment in ['N', 'C', 'NPC'])
     nframes = len(stats['time_sec'])
     nmol_stats = np.zeros(nframes)
@@ -123,10 +136,18 @@ def get_compartment_nmol_stats(ts,
     return nmol_stats
 
 
-def get_compartment_concentration_stats(ts,
-                                        stats,
-                                        compartment,
-                                        labels=['L', 'U']):
+def get_compartment_concentration_stats(ts: transport_simulation.TransportSimulation,
+                                        stats: dict,
+                                        compartment: str,
+                                        labels: list = ['L', 'U']):
+    """
+    Creates an array of concentrations for all molecules of interest in the location specified
+    :param ts:
+    :param stats:
+    :param compartment: location of the molcules (e.g. nucleus or cytoplasm)
+    :param labels:
+    :return:
+    """
     assert (compartment in ['N', 'C'])
     nmol_stats = get_compartment_nmol_stats(ts,
                                             stats,
@@ -137,7 +158,7 @@ def get_compartment_concentration_stats(ts,
     return (nmol_stats / transport_simulation.N_A) / volume_L
 
 
-def get_N_C_ratio_stats(ts,
+def get_N_C_ratio_stats(ts: transport_simulation.TransportSimulation,
                         stats,
                         labels=['L', 'U']):
     EPSILON = 1E-12
@@ -150,6 +171,9 @@ def get_N_C_ratio_stats(ts,
     return c_N_stats / c_C_stats
 
 
-def make_plot(stats_by_force, figname, free_to_complex_rates):
+def make_plot(stats_by_force, figname, free_to_complex_rates) -> None:
+    """
+    :return: None
+    """
     plot_MW_stats_list(*stats_by_force, free_to_complex_rates)
     plt.savefig(figname)

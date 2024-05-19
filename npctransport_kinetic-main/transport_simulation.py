@@ -7,8 +7,12 @@ CHECKS = False
 
 
 # TODO: test
-def fL_to_L(v_fL):
-    """ convert femtoliters to liters """
+def fL_to_L(v_fL: float) -> float:
+    """
+    Converts femtoliters to liters
+    :param v_fL: volume in femtoliters
+    :return: liter value corresponded to given femtoliter value
+    """
     return v_fL * 1E-15
 
 
@@ -29,7 +33,7 @@ def register_update_functions(cls):
     return cls
 
 
-def register_update(active=True):
+def register_update(active: bool = True):
     """
     A function which created a decorator that adds a function a bool attribute called '_update_func'
     with the value 'active'
@@ -53,14 +57,28 @@ class TransportSimulation:
     # getter/setter functions / utility
     ###########################################
 
-    def set_nmol(self, species, value):
+    def set_nmol(self, species: str, value: float) -> None:
+        """
+        Saves the molecule value for a given species
+        :param species: species tag
+        :param value: number of molecules of the given species
+        :return: None
+        """
         self.nmol[species] = value
 
-    def get_nmol(self, species):
+    def get_nmol(self, species: str) -> float:
+        """
+        Returns the number of molecules of a given species in its compartment
+        :param species: species tag
+        """
         return self.nmol[species]
 
-    def get_compartment(self, species):
-        """ return N/C/NPC for various free/complex, None for irregulars"""
+    def get_compartment(self, species: str) -> any:
+        """
+        Determines the compartment associated with a given species tag
+        :param species: species tag
+        :return: string containing N,C, or NPC, None if species tag is irregular
+        """
         m = re.search("(NPC_[A-Z]*)_..port$", species)
         if m is not None:
             return "NPC"
@@ -70,7 +88,12 @@ class TransportSimulation:
         assert (m.group(1) in ['N', 'C'])
         return m.group(1)
 
-    def get_compartment_volume_L(self, species):
+    def get_compartment_volume_L(self, species: str) -> float:
+        """
+        Returns the volume of the comportment for a species given the species tag
+        :param species: species tag
+        :return: volume (in liters) of the species compartment
+        """
         compt = self.get_compartment(species)
         if compt == "N":
             return self.v_N_L
@@ -81,22 +104,31 @@ class TransportSimulation:
         else:
             raise ValueError(f"Only nucleus/cytoplasm/cell has a volume (species {species} compartment {compt})")
 
-    def set_concentration_M(self, species, c_M):
+    def set_concentration_M(self, species: str, c_M: float) -> None:
         """
-        Sets the concentration of specified speciecs to c_M (in M units)
-        @raise ValueError if compartment has no volume
+        Stores the number of molecules of specified species given its concentration
+        :param species: species tag
+        :param c_M: concentration (in molar) of the species in its compartment
+        :return: None
+        :raise ValueError: if compartment has no volume
         """
         global N_A
         v_L = self.get_compartment_volume_L(species)
+        if v_L == 0:
+            raise ValueError(f"Volume for compartment of {species} is 0!")
         self.nmol[species] = c_M * v_L * N_A
 
-    def get_concentration_M(self, species):
+    def get_concentration_M(self, species: str) -> float:
         """
-        returns the concentrations of specied species in its compartment
-        @raise ValueError if compartment has no volume
+        Calculates the concentration of specified species in its compartment
+        :param species: species tag
+        :return: concentration (in molar) of the given species in its compartment
+        :raise ValueError: if compartment has no volume
         """
         global N_A
         v_L = self.get_compartment_volume_L(species)
+        if v_L == 0:
+            raise ValueError(f"Volume for compartment of {species} is 0!")
         return self.nmol[species] / (N_A * v_L)
 
     def set_RAN_distribution(self,
@@ -121,7 +153,13 @@ class TransportSimulation:
         self.nmol["GDP_N"] = nmol_Ran_cell * RAN_distribution[2]
         self.nmol["GDP_C"] = nmol_Ran_cell * RAN_distribution[3]
 
-    def reset_cargo_concentration(self, cargo_cytoplasmic_M, fraction_bound=0.0):
+    def reset_cargo_concentration(self, cargo_cytoplasmic_M: float, fraction_bound: float = 0.0) -> None:
+        """
+        Resets all cargo concentrations to 0 and sets the cytoplasmic cargo concentrations based on params provided
+        :param cargo_cytoplasmic_M: total concentration (in molar) of labeled cargo (bounded and unbound) in the cytoplasm
+        :param fraction_bound: fraction of labeled cargo bound to importin to form cargo-importin complex
+        :return: None
+        """
         # Cytoplasm:
         self.set_concentration_M("complexL_C",
                                  fraction_bound * cargo_cytoplasmic_M)  # Cytoplasmic concentration of labeled cargo-importin complex in M
@@ -140,29 +178,29 @@ class TransportSimulation:
         del self.nmol["cargo_N"]
         # NPC:
         self.nmol[
-            "complexL_NPC_N_import"] = 0  # number of cargo-importin complexes docked to the NPC on the nuclues side (labeled)
+            "complexL_NPC_N_import"] = 0  # number of cargo-importin complexes docked to the NPC on the nucleus side (labeled)
         self.nmol[
             "complexL_NPC_C_import"] = 0  # number of cargo-importin complexes docked to the NPC on the cytoplasmic side (labeled)
         self.nmol[
-            "complexU_NPC_N_import"] = 0  # number of cargo-importin complexes docked to the NPC on the nuclues side (unlabeled)
+            "complexU_NPC_N_import"] = 0  # number of cargo-importin complexes docked to the NPC on the nucleus side (unlabeled)
         self.nmol[
             "complexU_NPC_C_import"] = 0  # number of cargo-importin complexes docked to the NPC on the cytoplasmic side (unlabeled)
         self.nmol[
-            "complexL_NPC_N_export"] = 0  # number of cargo-importin complexes docked to the NPC on the nuclues side (labeled)
+            "complexL_NPC_N_export"] = 0  # number of cargo-importin complexes docked to the NPC on the nucleus side (labeled)
         self.nmol[
             "complexL_NPC_C_export"] = 0  # number of cargo-importin complexes docked to the NPC on the cytoplasmic side (labeled)
         self.nmol[
-            "complexU_NPC_N_export"] = 0  # number of cargo-importin complexes docked to the NPC on the nuclues side (unlabeled)
+            "complexU_NPC_N_export"] = 0  # number of cargo-importin complexes docked to the NPC on the nucleus side (unlabeled)
         self.nmol[
             "complexU_NPC_C_export"] = 0  # number of cargo-importin complexes docked to the NPC on the cytoplasmic side (unlabeled)
 
-    def set_v_N_L(self, v_L,
-                  fix_concentration):
+    def set_v_N_L(self, v_L: float, fix_concentration: bool) -> None:
         """
-        Change nuclear volume
-        :param v_L new volume in liters
-        :param fix_concentration: if True, rescale number of nuclear molecules
-          to fix nuclear (not cellular) concentration.
+        Changes nuclear volume
+        :param v_L: new volume in liters
+        :param fix_concentration: whether to rescale number of nuclear molecules to
+                                  fix nuclear (not cellular) concentration.
+        :return: None
         """
         print(f"change v_N_L from {self.v_N_L} to {v_L}")
         if fix_concentration:
@@ -173,13 +211,13 @@ class TransportSimulation:
                     self.set_nmol(key, s * value)
         self.v_N_L = v_L
 
-    def set_v_C_L(self, v_L,
-                  fix_concentration):
+    def set_v_C_L(self, v_L: float, fix_concentration: bool) -> None:
         """
-        Change cytoplasmic volume
-        :param v_L new volume in liters
-        :param fix_concentration: if True, rescale number of
-          cytoplasmic molecules to fix cytoplasmic (not cellular) concentration.
+        Changes cytoplasmic volume
+        :param v_L: new volume in liters
+        :param fix_concentration: whether to rescale number of cytoplasmic molecules to
+                                  fix cytoplasmic (not cellular) concentration
+        :return: None
         """
         print(f"change v_C_L from {self.v_C_L} to {v_L}")
         if fix_concentration:
@@ -190,30 +228,49 @@ class TransportSimulation:
                     self.set_nmol(key, s * value)
         self.v_C_L = v_L
 
-    def get_v_N_L(self):
+    def get_v_N_L(self) -> float:
+        """
+        Returns the volume of the nucleus in liters
+        """
         return self.v_N_L
 
-    def get_v_C_L(self):
+    def get_v_C_L(self) -> float:
+        """
+        Returns the volume of the cytoplasm in liters
+        """
         return self.v_C_L
 
-    def get_v_cell_L(self):
+    def get_v_cell_L(self) -> float:
+        """
+        Returns the volume of the cell in liters (adds vol of nucleus and vol of cytoplasm)
+        """
         return self.v_N_L + self.v_C_L
 
-    def set_time_step(self, dt_sec):
-        """ set time step in seconds """
+    def set_time_step(self, dt_sec: float) -> None:
+        """
+        Sets time step for simulation
+        :param dt_sec: the time step (in seconds) for each interation of the simulation
+        :return: None
+        """
         self.dt_sec = dt_sec
 
-    def get_time_step(self, dt_sec):
-        """ get time step in seconds """
-        self.dt_sec = dt_sec
+    def get_time_step(self) -> float:
+        """
+        Returns time step in seconds
+        """
+        return self.dt_sec
 
-    def reset_simulation_time(self):
+    def reset_simulation_time(self) -> None:
+        """
+        Resets simulation time value back to 0
+        :return: None
+        """
         self.sim_time_sec = 0.0
 
     ###################
-    # Consturctor (and init functions)
+    # Constructor (and init functions)
     ###################
-    def set_passive_nuclear_molar_rate_per_sec(self, rate_per_sec):
+    def set_passive_nuclear_molar_rate_per_sec(self, rate_per_sec: float) -> None:
         """
         Sets the parameter max_passive_diffusion_rate_nmol_per_sec_per_M such that the passive component of
         d[N]/dt is rate_per_sec*([C]-[N])
@@ -221,14 +278,14 @@ class TransportSimulation:
         self.max_passive_diffusion_rate_nmol_per_sec_per_M = \
             rate_per_sec * N_A * self.v_N_L  # convert per_M to per_nmol (so cancels nmol)
 
-    def set_passive_cytoplasmic_molar_rate_per_sec(self, rate_per_sec):
+    def set_passive_cytoplasmic_molar_rate_per_sec(self, rate_per_sec: float) -> None:
         """
         Sets the parameter max_passive_diffusion_rate_nmol_per_sec_per_M such that the passive component of
         d[C]/dt is rate_per_sec*([C]-[N])     """
         self.max_passive_diffusion_rate_nmol_per_sec_per_M = \
             rate_per_sec * N_A * self.v_C_L  # convert per_M to per_nmol (so cancels nmol)
 
-    def set_params(self, **kwargs):
+    def set_params(self, **kwargs) -> None:
         for param, value in kwargs.items():
             assert hasattr(self, param)
             setattr(self, param, value)
@@ -236,7 +293,7 @@ class TransportSimulation:
     def set_NPC_dock_sites(self, n_NPCs,
                            n_dock_sites_per_NPC
                            #  dock sites for cargo-importin complexes per NPC  # TODO: this may depend on molecule size
-                           ):
+                           ) -> None:
         self.NPC_dock_sites = n_NPCs * n_dock_sites_per_NPC  # total capacity for cargo-importin complexes in entire NPC, in number of molecules
 
     def _init_simulation_parameters(self, **kwargs):
@@ -269,7 +326,7 @@ class TransportSimulation:
         self.set_params(**kwargs)
 
     def __init__(self,
-                 v_C_L=55.85e-15,  # Cytoplsmic volume in L
+                 v_C_L=55.85e-15,  # Cytoplasmic volume in L
                  v_N_L=4.35e-15,  # Nuclear volume in L
                  **kwargs):
         """ Set initial state of the simulation """
@@ -277,20 +334,20 @@ class TransportSimulation:
         self.sim_time_sec = 0.0
         self.nmol = {}  # number of molecules of various species
         # Cell geometry:
-        self.v_C_L = v_C_L  # Cytoplsmic volume in L
+        self.v_C_L = v_C_L  # Cytoplasmic volume in L
         self.v_N_L = v_N_L  # Nuclear volume in L
-        #        self.v_C_L= 10e-15 # Cytoplsmic volume in L
+        #        self.v_C_L= 10e-15 # Cytoplasmic volume in L
         #        self.v_N_L= 5e-15 # Nuclear volume in L
         self.reset_cargo_concentration(self.init_cargo_cytoplasm_M, self.init_fraction_bound)
         # import export per dt_sec
         self.nmol[
-            "nuclear_importL_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentratio (dN/dt=rate*[C])
+            "nuclear_importL_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentration (dN/dt=rate*[C])
         self.nmol[
-            "nuclear_exportL_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentratio (dN/dt=rate*[C])
+            "nuclear_exportL_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentration (dN/dt=rate*[C])
         self.nmol[
-            "nuclear_importU_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentratio (dN/dt=rate*[N])
+            "nuclear_importU_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentration (dN/dt=rate*[N])
         self.nmol[
-            "nuclear_exportU_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentratio (dN/dt=rate*[N])
+            "nuclear_exportU_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentration (dN/dt=rate*[N])
         # Ran in all:
         self.set_RAN_distribution(Ran_cell_M=self.Ran_cell_M,
                                   # total physiological concentration of Ran # TODO: check in the literature
@@ -498,7 +555,7 @@ class TransportSimulation:
         Return: dictionary with number of molecules to add/subtract from each species
 
         # COMMENT: a proper treatment of this would depend on ratio between nuclear 
-        # and cytoplasmic volumes, number of NPCs etc - here we ignore this for now
+        # and cytoplasmic volumes, number of NPCs etc. - here we ignore this for now
         # - we can change it in future based on theoretical equations of passive diffusion
         """
         # Comment: competition is assumed to have zero effect at this time
@@ -671,13 +728,13 @@ class TransportSimulation:
     # Individual update rules:
     ########################
 
-    def get_nmol_T_summary(self, T_list):
+    def get_nmol_T_summary(self, T_list: list) -> dict:
         """
         Summarize all transition by summing over a list of tuples of transitions
 
-        @param T_list a list of tuples (src, dst, nmol), each representing a transfer of nmol
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of nmol
                       molecules from a molecular species src to the molecular species dst
-        @return a dictionary mapping from molecular species to total change in counts
+        :return: a dictionary mapping from molecular species to total change in counts
         """
         T = {}
         for src, dst, nmol in T_list:
@@ -693,7 +750,7 @@ class TransportSimulation:
 
         return T
 
-    def get_import_export_summary(self, T_list):
+    def get_import_export_summary(self, T_list) -> None:
         """
         Compute a summary of the gross number of cargo molecules imported and exported.
         Should be called BEFORE transitions are updated
@@ -757,9 +814,10 @@ class TransportSimulation:
                     cytoplasmic_import_rate_per_sec * (
                             self.get_v_C_L() / self.get_v_N_L())  # from d[C]/dt to d[N]/dt as a function of [C]
 
-    def do_one_time_step(self):
+    def do_one_time_step(self) -> None:
         """
         Update all state variables over a single time step
+        :return: None
         """
         # Compute transitions:
         T_list = []
@@ -810,23 +868,41 @@ class TransportSimulation:
     ##########################
     # Debug utility functions
     ########################
-    def get_total_RAN(self):
+    def get_total_RAN(self) -> float:
+        """
+        Returns the total number of molecules of RAN_GDP + RAN_GTP in the cell
+        """
         RAN = self.nmol["GDP_C"] + self.nmol["GTP_C"] + self.nmol["GDP_N"] + self.nmol["GTP_N"]
         return RAN
 
-    def get_total_cargoL_nmol(self):
-        def is_cargoL(s):
+    def get_total_cargoL_nmol(self) -> float:
+        """
+        Returns the total number of molecules of labeled cargo (bound and unbound) in the cell
+        """
+        def is_cargoL(s: str) -> bool:
+            """
+            Returns whether species contains labeled cargo (can be in complex or free)
+            :param s: species tag
+            """
             return s.startswith("freeL_") or s.startswith("complexL_")
 
         return sum([self.nmol[key] for key in self.nmol if is_cargoL(key)])
 
-    def get_total_cargoU_nmol(self):
-        def is_cargoU(s):
+    def get_total_cargoU_nmol(self) -> float:
+        """
+        Returns the total number of molecules of unlabeled cargo (bound and unbound) in the cell
+        """
+        def is_cargoU(s: str) -> bool:
+            """
+            Returns whether species contains unlabeled cargo (can be in complex or free)
+            :param s: species tag
+            """
             return s.startswith("freeU_") or s.startswith("complexU_")
 
         return sum([self.nmol[key] for key in self.nmol if "U" in key])
 
-    def get_total_cargo_nmol(self):
+    def get_total_cargo_nmol(self) -> float:
+        """
+        Returns the total number of molecules of cargo (labeled and unlabeled, bound and unbound) in the cell
+        """
         return self.get_total_cargoL_nmol() + self.get_total_cargoU_nmol()
-
-#
