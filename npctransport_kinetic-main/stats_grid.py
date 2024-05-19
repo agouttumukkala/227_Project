@@ -21,6 +21,9 @@ epilogue = "For example, running 'python stats_grid.py -c 50e-9 -nx 20 -ny 20 -n
 
 
 def parse_args():
+    """
+
+    """
     parser = argparse.ArgumentParser(description=main_description, epilog=epilogue)
     parser.add_argument("-np", "--n-passive", type=int, default=10,
                         help="the number of values in the range --passive-range to run")
@@ -60,13 +63,16 @@ def parse_args():
     return args
 
 
-def get_param_range_traverse_kon(nx,
-                                 ny,
-                                 npc_traverse_range=(1.0, 1000.0),
-                                 k_on_range=(0.01, 10.0)
-                                 ):
+def get_param_range_traverse_kon(nx: int, ny: int, npc_traverse_range: tuple = (1.0, 1000.0),
+                                 k_on_range: tuple = (0.01, 10.0)) -> dict:
     """
-
+    Obtains the specific of NPC traverse rate values and free-to-complex rate values to iterate over
+    :param nx: number of values used to discretize npc_traverse_range
+    :param ny: number of values used to discretize k_on_range
+    :param npc_traverse_range: tuple of the min and max values for the NPC traverse rate range
+    :param k_on_range: tuple of the min and max values for the free-to-complex rate range
+    :return: dictionary containing information on the discrete NPC traverse rates and free-to-complex rates to be
+             modelled
     """
     param_range = {}
     print(f"nx={nx} ny={ny}")
@@ -81,10 +87,18 @@ def get_param_range_traverse_kon(nx,
 
 
 def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
-                                        Ran_cell_M=20.0e-6,
-                                        v_N_L=627e-15,
-                                        v_C_L=2194e-15,
-                                        **kwargs):
+                                        Ran_cell_M: float = 20.0e-6,
+                                        v_N_L: float = 627e-15,
+                                        v_C_L: float = 2194e-15,
+                                        **kwargs) -> transport_simulation.TransportSimulation:
+    """
+
+    :param passive_nuclear_molar_rate_per_sec:
+    :param Ran_cell_M:
+    :param v_N_L: nucleus volume in liters
+    :param v_C_L: cytoplasm volume in liters
+    :return:
+    """
     ts = transport_simulation.TransportSimulation(v_N_L=v_N_L,
                                                   v_C_L=v_C_L)
     ts.set_time_step(0.1e-3)
@@ -118,7 +132,17 @@ def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
 def plot_stats_grids(stats_grids, transport_simulation, param_range,
                      NC_min=1.0,
                      NC_max=20.0,
-                     vmax_import_export=10.0):
+                     vmax_import_export=10.0) -> None:
+    """
+
+    :param stats_grids:
+    :param transport_simulation:
+    :param param_range:
+    :param NC_min:
+    :param NC_max:
+    :param vmax_import_export:
+    :return: None
+    """
     fig, axes = plt.subplots(3, 3, figsize=(14, 10), sharex=True, sharey=True)
     # N/C
     plt.sca(axes[0, 0])
@@ -189,7 +213,15 @@ def plot_stats_grids(stats_grids, transport_simulation, param_range,
                                    extend='both')
 
 
-def transport_simulation_generator(passive, Ran_cell_M, c_M, **kwargs):
+def transport_simulation_generator(passive: float, Ran_cell_M: float, c_M: float,
+                                   **kwargs) -> transport_simulation.TransportSimulation:
+    """
+
+    :param passive:
+    :param Ran_cell_M:
+    :param c_M:
+    :return:
+    """
     print(f"Ran: {Ran_cell_M:.6f} M")
     return get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec=passive,
                                                Ran_cell_M=Ran_cell_M,
@@ -199,18 +231,35 @@ def transport_simulation_generator(passive, Ran_cell_M, c_M, **kwargs):
 
 def get_stats_on_grid(output,
                       passive_range,
-                      npc_traverse_range,
-                      k_on_range,
-                      nx=20,
-                      ny=20,
+                      npc_traverse_range: tuple,
+                      k_on_range: tuple,
+                      nx: int = 20,
+                      ny: int = 20,
                       n_passive=10,
-                      cargo_concentration_M=50e-6,
-                      Ran_concentration_M=20e-6,
-                      v_N_L=627e-15,
-                      v_C_L=2194e-15,
-                      equilibration_time_sec=100.0,
+                      cargo_concentration_M: float = 50e-6,
+                      Ran_concentration_M: float = 20e-6,
+                      v_N_L: float = 627e-15,
+                      v_C_L: float = 2194e-15,
+                      equilibration_time_sec: float = 100.0,
                       pickle_file=None
-                      ):
+                      ) -> None:
+    """
+
+    :param output:
+    :param passive_range:
+    :param npc_traverse_range: tuple of the min and max values for the NPC traverse rate range
+    :param k_on_range: tuple of the min and max values for the free-to-complex rate range
+    :param nx: number of values used to discretize npc_traverse_range
+    :param ny: number of values used to discretize k_on_range
+    :param n_passive:
+    :param cargo_concentration_M:
+    :param Ran_concentration_M:
+    :param v_N_L:
+    :param v_C_L:
+    :param equilibration_time_sec:
+    :param pickle_file:
+    :return: None
+    """
     param_range = get_param_range_traverse_kon(nx, ny,
                                                npc_traverse_range,
                                                k_on_range)

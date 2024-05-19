@@ -43,8 +43,7 @@ def plot_MW_stats_list(stats_list_by_force: dict, TSs_by_force: dict, free_to_co
             ys[0] = stats['nuclear_importL_per_sec'] + stats['nuclear_importU_per_sec']
             ys[1] = stats['nuclear_exportL_per_sec'] + stats['nuclear_exportU_per_sec']
             ys[2] = get_N_C_ratio_stats(ts,
-                                        stats,
-                                        labels)
+                                        stats)
             ys[3] = get_compartment_concentration_stats(ts,
                                                         stats,
                                                         'C',
@@ -54,10 +53,9 @@ def plot_MW_stats_list(stats_list_by_force: dict, TSs_by_force: dict, free_to_co
                                                         'N',
                                                         labels)
             ys[5] = ys[3] - ys[4]
-            ys[6] = stats['complexL_NPC_N_import'] + stats['complexL_NPC_C_import'] + stats['complexL_NPC_N_export'] + \
-                    stats['complexL_NPC_C_export'] \
-                    + stats['complexU_NPC_C_import'] + stats['complexU_NPC_C_import'] + stats['complexU_NPC_N_export'] + \
-                    stats['complexU_NPC_C_export']
+            ys[6] = (stats['complexL_NPC_N_import'] + stats['complexL_NPC_C_import'] + stats['complexL_NPC_N_export'] +
+                     stats['complexL_NPC_C_export'] + stats['complexU_NPC_C_import'] + stats['complexU_NPC_C_import'] +
+                     stats['complexU_NPC_N_export'] + stats['complexU_NPC_C_export'])
             for iextra, extra in enumerate(extras):
                 ys[7 + iextra] = stats[extra]
             plot_from_frame = int(plot_from_sec / ts.dt_sec)
@@ -105,11 +103,10 @@ def plot_MW_stats_list(stats_list_by_force: dict, TSs_by_force: dict, free_to_co
     lh.set_title('NLS strength')
 
 
-def get_compartment_nmol_stats(ts: transport_simulation.TransportSimulation, stats: dict, compartment: str,
+def get_compartment_nmol_stats(stats: dict, compartment: str,
                                labels: list = ['L', 'U']):
     """
     Consolidates mole values for all molecules in specific location into one np array
-    :param ts:
     :param stats:
     :param compartment: location of the tracked molecules (e.g. nucleus, cytoplasm, or NPC)
     :param labels:
@@ -149,8 +146,7 @@ def get_compartment_concentration_stats(ts: transport_simulation.TransportSimula
     :return:
     """
     assert (compartment in ['N', 'C'])
-    nmol_stats = get_compartment_nmol_stats(ts,
-                                            stats,
+    nmol_stats = get_compartment_nmol_stats(stats,
                                             compartment,
                                             labels)
     is_nuclear = (compartment == 'N')
@@ -159,8 +155,13 @@ def get_compartment_concentration_stats(ts: transport_simulation.TransportSimula
 
 
 def get_N_C_ratio_stats(ts: transport_simulation.TransportSimulation,
-                        stats,
-                        labels=['L', 'U']):
+                        stats):
+    """
+
+    :param ts:
+    :param stats:
+    :return:
+    """
     EPSILON = 1E-12
     c_N_stats = get_compartment_concentration_stats(ts,
                                                     stats,
@@ -173,6 +174,10 @@ def get_N_C_ratio_stats(ts: transport_simulation.TransportSimulation,
 
 def make_plot(stats_by_force, figname, free_to_complex_rates) -> None:
     """
+
+    :param stats_by_force:
+    :param figname:
+    :param free_to_complex_rates:
     :return: None
     """
     plot_MW_stats_list(*stats_by_force, free_to_complex_rates)

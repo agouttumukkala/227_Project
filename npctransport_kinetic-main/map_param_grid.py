@@ -38,7 +38,11 @@ def get_tau_passive_diffusion(nmol_per_sec_per_M, volume_L):
     return tau
 
 
-def get_new_transport_simulation(**kwargs):
+def get_new_transport_simulation(**kwargs) -> transport_simulation.TransportSimulation:
+    """
+
+    :return:
+    """
     ts = transport_simulation.TransportSimulation(**kwargs)
     ts.set_time_step(1e-3)
     return ts
@@ -49,7 +53,17 @@ def mp_do_simulation(param_range, i, j,
                      tsg,  # transport simulation generator
                      tsg_params,  # transport_simulation_generator_params
                      rng  # random number generator
-                     ):
+                     ) -> dict:
+    """
+
+    :param param_range:
+    :param i:
+    :param j:
+    :param tsg:
+    :param tsg_params:
+    :param rng:
+    :return:
+    """
     nskip_statistics = 100
     my_ts = tsg(**tsg_params)
     cur_params = {param_range['tag_x']: param_range['range_x'][i],
@@ -58,12 +72,17 @@ def mp_do_simulation(param_range, i, j,
     stats = my_ts.simulate(equilibration_time_sec,
                            nskip_statistics=100)
     r = rng.random()
-    if (r < 0.1):
+    if r < 0.1:
         print(f"Finished some ten jobs (at i={i} j={j} r={r})")
     return {"i": i, "j": j, "stats": stats}
 
 
-def mp_handle_stats(stats_grids, mydicts):
+def mp_handle_stats(stats_grids, mydicts) -> None:
+    """
+    :param stats_grids:
+    :param mydicts:
+    :return: None
+    """
     for mydict in mydicts:
         i = mydict["i"]
         j = mydict["j"]
@@ -81,7 +100,7 @@ def mp_handle_stats(stats_grids, mydicts):
                 print(e)
 
 
-def mp_handle_error(error):
+def mp_handle_error(error) -> None:
     print("Error", error)
 
 
@@ -90,7 +109,7 @@ def map_param_grid_parallel(param_range,
                             n_processors=5,
                             transport_simulation_generator=get_new_transport_simulation,
                             transport_simulation_generator_params=dict()
-                            ):
+                            ) -> tuple:
     """
     Run in parallel to compute simulation results over a range of parameters
 
@@ -142,7 +161,7 @@ def map_param_grid_parallel(param_range,
     return stats_grids, ts
 
 
-def _get_df_for_stats_grids(param_range, passive_rate, stats_grids, ts):
+def _get_df_for_stats_grids(param_range, passive_rate, stats_grids, ts) -> pd.DataFrame:
     """
     :param param_range a valid param-range input for
        map_param_grid.map_param_grid_parallel()
@@ -176,7 +195,7 @@ def _get_df_for_stats_grids(param_range, passive_rate, stats_grids, ts):
 
 def get_df_from_stats_grids_by_passive(param_range,
                                        stats_grids_by_passive,
-                                       ts_by_passive):
+                                       ts_by_passive) -> pd.DataFrame:
     """
     Converts stats_grids_by_passive returned by map_param_grid_parallel() etc.
     to a pandas dataframe with column 'passive rate' for passive rates, and
@@ -190,7 +209,7 @@ def get_df_from_stats_grids_by_passive(param_range,
     dfs = [_get_df_for_stats_grids(param_range,
                                    passive,
                                    stats_grids,
-                                   ts_by_passive[passive]) \
+                                   ts_by_passive[passive])
            for (passive, stats_grids) in stats_grids_by_passive.items()]
     df = pd.concat(dfs)
     return df
@@ -201,7 +220,14 @@ def get_df_from_stats_grids_by_passive(param_range,
 def plot_param_grid(param_range,
                     Z,
                     Z_label=None,
-                    **contourf_kwargs):
+                    **contourf_kwargs) -> None:
+    """
+
+    :param param_range:
+    :param Z:
+    :param Z_label:
+    :return: None
+    """
     x_meshgrid, y_meshgrid = np.meshgrid(param_range["range_x"],
                                          param_range["range_y"])
 
@@ -225,25 +251,49 @@ def plot_param_grid(param_range,
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
 
 
-def get_N_to_C_ratios(stats_grids, v_N_L, v_C_L):
-    """ return N/C ratios from stats_grids computed in the previous cell"""
+def get_N_to_C_ratios(stats_grids: dict, v_N_L: float, v_C_L: float) -> float:
+    """
+    return N/C ratios from stats_grids computed in the previous cell
+
+    :param stats_grids:
+    :param v_N_L: volume (in liters) of the nucleus
+    :param v_C_L: volume (in liters) of the cytoplasm
+    :return:
+    """
     nNs = stats_grids["complexL_N"] + stats_grids["freeL_N"] + stats_grids["complexU_N"] + stats_grids["freeU_N"]
     nCs = stats_grids["complexL_C"] + stats_grids["freeL_C"] + stats_grids["complexU_C"] + stats_grids["freeU_C"]
     ratios = (nNs / v_N_L) / (nCs / v_C_L)
     return ratios
 
 
-def get_N_to_C_ratios_for_ts(stats_grids, ts):
-    """ return N/C ratios from stats_grids computed in the previous cell for simulation ts"""
+def get_N_to_C_ratios_for_ts(stats_grids, ts: transport_simulation.TransportSimulation) -> float:
+    """
+    return N/C ratios from stats_grids computed in the previous cell for simulation ts
+
+    :param stats_grids:
+    :param ts:
+    :return:
+    """
     return get_N_to_C_ratios(stats_grids,
                              v_N_L=ts.get_v_N_L(),
                              v_C_L=ts.get_v_C_L())
 
 
-def plot_NC_ratios(param_range, stats_grids, ts,
+def plot_NC_ratios(param_range, stats_grids, ts: transport_simulation.TransportSimulation,
                    vmin=1.0, vmax=4.0,
                    locator=None,
-                   levels=None):
+                   levels=None) -> None:
+    """
+
+    :param param_range:
+    :param stats_grids:
+    :param ts:
+    :param vmin:
+    :param vmax:
+    :param locator:
+    :param levels:
+    :return: None
+    """
     NC_ratios = get_N_to_C_ratios_for_ts(stats_grids, ts)
     print(vmin, vmax)
     plot_param_grid(param_range,
@@ -256,7 +306,15 @@ def plot_NC_ratios(param_range, stats_grids, ts,
                     extend='both')
 
 
-def plot_bound_fraction(param_range, stats_grids, compartment, ax=None):
+def plot_bound_fraction(param_range, stats_grids, compartment, ax=None) -> None:
+    """
+
+    :param param_range:
+    :param stats_grids:
+    :param compartment:
+    :param ax:
+    :return: None
+    """
     assert (compartment in ['N', 'C'])
     tag_complex = f"complexL_{compartment}"
     tag_free = f"freeL_{compartment}"
@@ -275,8 +333,12 @@ def plot_bound_fraction(param_range, stats_grids, compartment, ax=None):
                     extend='both')
 
 
-def get_import_export_ratios(stats_grids):
-    """ return import/export ratios from stats_grids computed in the previous cell"""
+def get_import_export_ratios(stats_grids: dict) -> float:
+    """
+    return import/export ratios from stats_grids computed in the previous cell
+    :param stats_grids:
+    :return:
+    """
     import_rate = stats_grids["nuclear_importL_per_sec"] + stats_grids["nuclear_importU_per_sec"]
     export_rate = stats_grids["nuclear_exportL_per_sec"] + stats_grids["nuclear_exportU_per_sec"]
     ratios = import_rate / export_rate
@@ -284,7 +346,14 @@ def get_import_export_ratios(stats_grids):
 
 
 def plot_import_export(param_range, stats_grids, axes=None,
-                       **contourf_kwargs):
+                       **contourf_kwargs) -> None:
+    """
+
+    :param param_range:
+    :param stats_grids:
+    :param axes:
+    :return: None
+    """
     if axes is None:
         fig, axes = subplot(2, 1)
     for tag, ax in zip(['import', 'export'], axes):
@@ -293,5 +362,3 @@ def plot_import_export(param_range, stats_grids, axes=None,
                         stats_grids[f'nuclear_{tag}L_per_sec'],
                         Z_label=tag + r' [$sec^{-1}$]',
                         **contourf_kwargs)
-
-# %%

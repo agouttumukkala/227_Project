@@ -274,6 +274,7 @@ class TransportSimulation:
         """
         Sets the parameter max_passive_diffusion_rate_nmol_per_sec_per_M such that the passive component of
         d[N]/dt is rate_per_sec*([C]-[N])
+        :return: None
         """
         self.max_passive_diffusion_rate_nmol_per_sec_per_M = \
             rate_per_sec * N_A * self.v_N_L  # convert per_M to per_nmol (so cancels nmol)
@@ -281,22 +282,36 @@ class TransportSimulation:
     def set_passive_cytoplasmic_molar_rate_per_sec(self, rate_per_sec: float) -> None:
         """
         Sets the parameter max_passive_diffusion_rate_nmol_per_sec_per_M such that the passive component of
-        d[C]/dt is rate_per_sec*([C]-[N])     """
+        d[C]/dt is rate_per_sec*([C]-[N])
+        :return: None
+        """
         self.max_passive_diffusion_rate_nmol_per_sec_per_M = \
             rate_per_sec * N_A * self.v_C_L  # convert per_M to per_nmol (so cancels nmol)
 
     def set_params(self, **kwargs) -> None:
+        """
+        :return: None
+        """
         for param, value in kwargs.items():
             assert hasattr(self, param)
             setattr(self, param, value)
 
-    def set_NPC_dock_sites(self, n_NPCs,
-                           n_dock_sites_per_NPC
-                           #  dock sites for cargo-importin complexes per NPC  # TODO: this may depend on molecule size
+    def set_NPC_dock_sites(self, n_NPCs: int,
+                           n_dock_sites_per_NPC: int  # TODO: this may depend on molecule size
                            ) -> None:
-        self.NPC_dock_sites = n_NPCs * n_dock_sites_per_NPC  # total capacity for cargo-importin complexes in entire NPC, in number of molecules
+        """
+        Sets the total number of dock sites for cargo-importin complex on NPCs
+        :param n_NPCs: total number of nuclear pore complexes
+        :param n_dock_sites_per_NPC: number of dock sites for cargo-importin complex per NPC
+        :return: None
+        """
+        self.NPC_dock_sites = n_NPCs * n_dock_sites_per_NPC
 
-    def _init_simulation_parameters(self, **kwargs):
+    def _init_simulation_parameters(self, **kwargs) -> None:
+        """
+
+        :return: None
+        """
         # TODO: add all simulation parameters here with proper units
         self.dt_sec = 1e-3  # simulation time step
         # NPC dock capacity: #TODO
@@ -325,11 +340,13 @@ class TransportSimulation:
         self.init_fraction_bound = 0.0
         self.set_params(**kwargs)
 
-    def __init__(self,
-                 v_C_L=55.85e-15,  # Cytoplasmic volume in L
-                 v_N_L=4.35e-15,  # Nuclear volume in L
-                 **kwargs):
-        """ Set initial state of the simulation """
+    def __init__(self, v_C_L: float = 55.85e-15, v_N_L: float = 4.35e-15, **kwargs):
+        """
+        Set initial state of the simulation
+        :param v_C_L: the cytoplasmic volume in liters
+        :param v_N_L: the nuclear volume in liters
+        :return:
+        """
         self._init_simulation_parameters(**kwargs)
         self.sim_time_sec = 0.0
         self.nmol = {}  # number of molecules of various species
@@ -361,7 +378,7 @@ class TransportSimulation:
     ########################
 
     @register_update()
-    def get_nmol_complex_NPC_to_free_N(self, T_list):
+    def get_nmol_complex_NPC_to_free_N(self, T_list) -> None:
         """                                                                                                        
         Number of labeled cargo molecules released from the NPC to the nucleus over a self.dt_sec time step        
         (Note: it is assumed each undocking leads to export of a single RanGTP molecule)                           
@@ -389,7 +406,7 @@ class TransportSimulation:
                            nmol=n_GTP)
 
     @register_update()
-    def get_nmol_complex_N_to_free_N(self, T_list):
+    def get_nmol_complex_N_to_free_N(self, T_list) -> None:
         """
         Number of labeled cargo molecules that disassemble in the nucleus over a self.dt_sec time step
         Note: it is assumed each GTP-dependent undocking leads to export of a single RanGTP molecule instantaneously
@@ -418,7 +435,7 @@ class TransportSimulation:
                            nmol=n_GTP)
 
     @register_update()
-    def get_nmol_GDP_N_to_GTP_N(self, T_list):
+    def get_nmol_GDP_N_to_GTP_N(self, T_list) -> None:
         """
         Number of GDP molecules in the nucleus converted to GTP
 
@@ -433,7 +450,7 @@ class TransportSimulation:
                            nmol=n)
 
     @register_update()
-    def get_nmol_GTP_C_to_GDP_C(self, T_list):
+    def get_nmol_GTP_C_to_GDP_C(self, T_list) -> None:
         """
         Number of GTP molecules in the cytoplasm converted to GDP
 
@@ -448,7 +465,7 @@ class TransportSimulation:
                            nmol=n)
 
     @register_update()
-    def get_nmol_GTP_N_to_GTP_C(self, T_list):
+    def get_nmol_GTP_N_to_GTP_C(self, T_list) -> None:
         """
         Number of GTP molecules exported from the nucleus
 
@@ -464,7 +481,7 @@ class TransportSimulation:
                            nmol=n)
 
     @register_update()
-    def get_nmol_GDP_C_to_GDP_N(self, T_list):
+    def get_nmol_GDP_C_to_GDP_N(self, T_list) -> None:
         """
         Number of GDP molecules imported to the nucleus
 
@@ -479,7 +496,7 @@ class TransportSimulation:
                            nmol=n)
 
     @register_update()
-    def get_nmol_complex_C_to_free_C(self, T_list):
+    def get_nmol_complex_C_to_free_C(self, T_list) -> None:
         """
         The number of cargo-importin complexes that unbind importin over time step dt_sec
 
@@ -501,7 +518,7 @@ class TransportSimulation:
                            nmol=nU)
 
     @register_update()
-    def get_nmol_free_C_to_complex_C(self, T_list):  # assume importin is not rate limiting
+    def get_nmol_free_C_to_complex_C(self, T_list) -> None:  # assume importin is not rate limiting
         """
         The number of the labeled molecules that bind to importin over time step dt_sec
         in the cytoplasm
@@ -524,7 +541,7 @@ class TransportSimulation:
                            nmol=nU)
 
     @register_update()
-    def get_nmol_free_N_to_complex_N(self, T_list):  # assume importin is not rate limiting
+    def get_nmol_free_N_to_complex_N(self, T_list) -> None:  # assume importin is not rate limiting
         """
         The number of the labeled molecules that bind to importin over time step dt_sec
         in the nucleus
@@ -547,7 +564,7 @@ class TransportSimulation:
                            nmol=nU)
 
     @register_update()
-    def get_free_N_to_free_C(self, T_list):  # passive
+    def get_free_N_to_free_C(self, T_list) -> None:  # passive
         """
         Computes the net number of unbound molecules in the nucleus that passively export 
         to the cytoplasm per second (net = export - import)
@@ -588,7 +605,7 @@ class TransportSimulation:
                            nmol=nU_import)
 
     @register_update()
-    def get_nmol_complex_N_C_to_complex_NPC(self, T_list):
+    def get_nmol_complex_N_C_to_complex_NPC(self, T_list) -> None:
         """
         Computes the number of molecules that bind to the NPC from the nucleus
         over dt_sec time step (These will all be bound to importin)
@@ -642,7 +659,7 @@ class TransportSimulation:
                            nmol=nU_C)
 
     @register_update()
-    def get_nmol_complex_NPC_traverse(self, T_list):
+    def get_nmol_complex_NPC_traverse(self, T_list) -> None:
         """
         Number of molecules passing between the N side and C side of the NPC (or vice versa)
         """
@@ -673,7 +690,7 @@ class TransportSimulation:
                                        nmol=n)
 
     @register_update()
-    def get_nmol_complex_NPC_to_complex_N_C(self, T_list):
+    def get_nmol_complex_NPC_to_complex_N_C(self, T_list) -> None:
         """
         Number of complexed cargo-importin released from the nuclear and cytoplasmic
         ends of the NPC to the nucleus and cytoplasm, respectively
