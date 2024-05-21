@@ -95,7 +95,7 @@ def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
     """
 
     :param passive_nuclear_molar_rate_per_sec:
-    :param Ran_cell_M:
+    :param Ran_cell_M: total Ran concentration in the nucleus and cytoplasm combined (in M)
     :param v_N_L: nucleus volume in liters
     :param v_C_L: cytoplasm volume in liters
     :return:
