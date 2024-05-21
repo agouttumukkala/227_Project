@@ -32,6 +32,7 @@ def get_tau_passive_diffusion(nmol_per_sec_per_M, volume_L):
     the volume from which the passive diffusion leaves
     TODO: is this needed anywhere?
     """
+    # TODO: update docstring and typing
     global N_A
     gamma = nmol_per_sec_per_M / N_A / volume_L
     tau = 1.0 / gamma
@@ -43,27 +44,32 @@ def get_new_transport_simulation(**kwargs) -> transport_simulation.TransportSimu
 
     :return:
     """
+    # TODO: update docstring and typing
     ts = transport_simulation.TransportSimulation(**kwargs)
     ts.set_time_step(1e-3)
     return ts
 
 
-def mp_do_simulation(param_range, i, j,
-                     equilibration_time_sec,
+def mp_do_simulation(param_range: dict, i: int, j: int,
+                     equilibration_time_sec: float,
                      tsg,  # transport simulation generator
-                     tsg_params,  # transport_simulation_generator_params
-                     rng  # random number generator
+                     tsg_params: dict,  # transport_simulation_generator_params
+                     rng: np.random.Generator  # random number generator
                      ) -> dict:
     """
 
-    :param param_range:
-    :param i:
-    :param j:
-    :param tsg:
-    :param tsg_params:
-    :param rng:
+    :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding
+                 to x/y-axis param names, resp., and 'range_x'/'range_y' keys
+                 for numpy array for corresponding param ranges
+    :param i: index for the x value in the x-range to simulate on
+    :param j: index for the y value in the y-range to simulate on
+    :param equilibration_time_sec: equilibration time for the system in seconds
+    :param tsg: transport simulator generator function
+    :param tsg_params: dictionary of param names and values to be passed to the transport simulator generator function
+    :param rng: a random number generator
     :return:
     """
+    # TODO: update docstring and typing
     nskip_statistics = 100
     my_ts = tsg(**tsg_params)
     cur_params = {param_range['tag_x']: param_range['range_x'][i],
@@ -77,10 +83,13 @@ def mp_do_simulation(param_range, i, j,
     return {"i": i, "j": j, "stats": stats}
 
 
-def mp_handle_stats(stats_grids, mydicts) -> None:
+def mp_handle_stats(stats_grids: dict, mydicts: list) -> None:
     """
-    :param stats_grids:
-    :param mydicts:
+    Update the master dictionary of values for each i-j pair as the simulation progresses
+    :param stats_grids: master dictionary of numpy arrays with the species names as the keys that contains the values of
+                        each species for each i-j pair at the latest time point
+    :param mydicts: list of dictionaries for each i-j pair that contain the values for each species at each discrete
+                    time point
     :return: None
     """
     for mydict in mydicts:
@@ -101,12 +110,13 @@ def mp_handle_stats(stats_grids, mydicts) -> None:
 
 
 def mp_handle_error(error) -> None:
+    # TODO: update docstring and typing
     print("Error", error)
 
 
-def map_param_grid_parallel(param_range,
-                            equilibration_time_sec=150.0,
-                            n_processors=5,
+def map_param_grid_parallel(param_range: dict,
+                            equilibration_time_sec: float = 150.0,
+                            n_processors: int = 5,
                             transport_simulation_generator=get_new_transport_simulation,
                             transport_simulation_generator_params=dict()
                             ) -> tuple:
@@ -116,23 +126,24 @@ def map_param_grid_parallel(param_range,
     :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding
                  to x/y-axis param names, resp., and 'range_x'/'range_y' keys
                  for numpy array for corresponding param ranges
-    :param equilibration_time_sec: equilibration time per condition
+    :param equilibration_time_sec: equilibration time per condition in seconds
     :param n_processors: number of processors on which to run in parallel
     :param transport_simulation_generator a picklable (global) function that
               generates transport_simulation objects
-    :param transport_simulation_generator_params dictionary of parameters for
-              transport_simulation_generator_params
+    :param transport_simulation_generator_params dictionary of parameters to pass to
+              transport_simulation_generator
     :return a dictionary from simulation properties to 2D arrays with the
             their values at the end of simulations for each parameter
             combination
     """
+    # TODO: update docstring and typing
     VERBOSE = True
     nx = len(param_range['range_x'])
     ny = len(param_range['range_y'])
     ts = transport_simulation_generator(**transport_simulation_generator_params)  # a sample ts to be returned
     if VERBOSE:
         for param in [param_range['tag_x'], param_range['tag_y']]:
-            print("Param {:} default value is {:}".format(param, getattr(ts, param)))
+            print("Param {} default value is {}".format(param, getattr(ts, param)))
     stats_grids = {}
     for nmol_type in ts.nmol.keys():  # TODO: add get_nmols()
         stats_grids[nmol_type] = np.ndarray((ny, nx))  # Row major - y coordinate goes first
@@ -148,8 +159,7 @@ def map_param_grid_parallel(param_range,
                                 transport_simulation_generator_params,
                                 rngs[j * nx + i]))
     print("njobs={}".format(len(jobs_params)))
-    callback_function = \
-        lambda mydict: mp_handle_stats(stats_grids, mydict)
+    callback_function = lambda mydict: mp_handle_stats(stats_grids, mydict)
     pool = multiprocessing.Pool(processes=n_processors)
     results = pool.starmap_async(mp_do_simulation,
                                  jobs_params,
@@ -170,6 +180,7 @@ def _get_df_for_stats_grids(param_range, passive_rate, stats_grids, ts) -> pd.Da
     :param stats_grids a dictionary of stats for different molecules
        by passive rates i.e. output of map_param_grid.map_param_grid_parallel())
     """
+    # TODO: update docstring and typing
     X, Y = np.meshgrid(param_range['range_x'],
                        param_range['range_y'])
     df = pd.DataFrame(data={param_range['tag_x']: X.flatten(),
@@ -206,6 +217,7 @@ def get_df_from_stats_grids_by_passive(param_range,
     :param stats_grids a dictionary of stats for different molecules
        by passive rates i.e. output of map_param_grid.map_param_grid_parallel())
     """
+    # TODO: update docstring and typing
     dfs = [_get_df_for_stats_grids(param_range,
                                    passive,
                                    stats_grids,
@@ -217,20 +229,22 @@ def get_df_from_stats_grids_by_passive(param_range,
 
 ###### VISUALIZATION OF RESULTS ######
 
-def plot_param_grid(param_range,
-                    Z,
-                    Z_label=None,
+def plot_param_grid(param_range: dict,
+                    Z: np.ndarray,
+                    Z_label: str = None,
                     **contourf_kwargs) -> None:
     """
 
-    :param param_range:
-    :param Z:
-    :param Z_label:
+    :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding
+                        to x/y-axis param names, resp., and 'range_x'/'range_y' keys
+                        for numpy array for corresponding param ranges
+    :param Z: the z values to be plotted on the countour plot
+    :param Z_label: the label for the z measurement of the contour plot
     :return: None
     """
+    # TODO: update docstring and typing
     x_meshgrid, y_meshgrid = np.meshgrid(param_range["range_x"],
                                          param_range["range_y"])
-
     plt.contourf(x_meshgrid,
                  y_meshgrid,
                  Z,
@@ -251,7 +265,7 @@ def plot_param_grid(param_range,
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
 
 
-def get_N_to_C_ratios(stats_grids: dict, v_N_L: float, v_C_L: float) -> float:
+def get_N_to_C_ratios(stats_grids: dict, v_N_L: float, v_C_L: float) -> np.ndarray:
     """
     return N/C ratios from stats_grids computed in the previous cell
 
@@ -260,27 +274,29 @@ def get_N_to_C_ratios(stats_grids: dict, v_N_L: float, v_C_L: float) -> float:
     :param v_C_L: volume (in liters) of the cytoplasm
     :return:
     """
+    # TODO: update docstring and typing
     nNs = stats_grids["complexL_N"] + stats_grids["freeL_N"] + stats_grids["complexU_N"] + stats_grids["freeU_N"]
     nCs = stats_grids["complexL_C"] + stats_grids["freeL_C"] + stats_grids["complexU_C"] + stats_grids["freeU_C"]
     ratios = (nNs / v_N_L) / (nCs / v_C_L)
     return ratios
 
 
-def get_N_to_C_ratios_for_ts(stats_grids, ts: transport_simulation.TransportSimulation) -> float:
+def get_N_to_C_ratios_for_ts(stats_grids: dict, ts: transport_simulation.TransportSimulation) -> np.ndarray:
     """
     return N/C ratios from stats_grids computed in the previous cell for simulation ts
 
     :param stats_grids:
-    :param ts:
+    :param ts: current transport simulation
     :return:
     """
+    # TODO: update docstring and typing
     return get_N_to_C_ratios(stats_grids,
                              v_N_L=ts.get_v_N_L(),
                              v_C_L=ts.get_v_C_L())
 
 
 def plot_NC_ratios(param_range, stats_grids, ts: transport_simulation.TransportSimulation,
-                   vmin=1.0, vmax=4.0,
+                   vmin: float = 1.0, vmax:float = 4.0,
                    locator=None,
                    levels=None) -> None:
     """
@@ -294,6 +310,7 @@ def plot_NC_ratios(param_range, stats_grids, ts: transport_simulation.TransportS
     :param levels:
     :return: None
     """
+    # TODO: update docstring and typing
     NC_ratios = get_N_to_C_ratios_for_ts(stats_grids, ts)
     print(vmin, vmax)
     plot_param_grid(param_range,
@@ -315,6 +332,7 @@ def plot_bound_fraction(param_range, stats_grids, compartment, ax=None) -> None:
     :param ax:
     :return: None
     """
+    # TODO: update docstring and typing
     assert (compartment in ['N', 'C'])
     tag_complex = f"complexL_{compartment}"
     tag_free = f"freeL_{compartment}"
@@ -339,6 +357,7 @@ def get_import_export_ratios(stats_grids: dict) -> float:
     :param stats_grids:
     :return:
     """
+    # TODO: update docstring and typing
     import_rate = stats_grids["nuclear_importL_per_sec"] + stats_grids["nuclear_importU_per_sec"]
     export_rate = stats_grids["nuclear_exportL_per_sec"] + stats_grids["nuclear_exportU_per_sec"]
     ratios = import_rate / export_rate
@@ -354,6 +373,7 @@ def plot_import_export(param_range, stats_grids, axes=None,
     :param axes:
     :return: None
     """
+    # TODO: update docstring and typing
     if axes is None:
         fig, axes = subplot(2, 1)
     for tag, ax in zip(['import', 'export'], axes):

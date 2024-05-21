@@ -16,6 +16,7 @@ def plot_MW_stats_list(stats_list_by_force: dict, TSs_by_force: dict, free_to_co
     :param free_to_complex_rates:
     :return: None
     """
+    # TODO: update docstring and typing
     plot_from_sec = 0.1  # ts.bleach_start_time_sec + 1.0
     extras = [  #'GTP_N',
         #'GDP_N',
@@ -112,6 +113,7 @@ def get_compartment_nmol_stats(stats: dict, compartment: str,
     :param labels:
     :return:
     """
+    # TODO: update docstring and typing
     assert (compartment in ['N', 'C', 'NPC'])
     nframes = len(stats['time_sec'])
     nmol_stats = np.zeros(nframes)
@@ -145,6 +147,7 @@ def get_compartment_concentration_stats(ts: transport_simulation.TransportSimula
     :param labels:
     :return:
     """
+    # TODO: update docstring and typing
     assert (compartment in ['N', 'C'])
     nmol_stats = get_compartment_nmol_stats(stats,
                                             compartment,
@@ -162,6 +165,7 @@ def get_N_C_ratio_stats(ts: transport_simulation.TransportSimulation,
     :param stats:
     :return:
     """
+    # TODO: update docstring and typing
     EPSILON = 1E-12
     c_N_stats = get_compartment_concentration_stats(ts,
                                                     stats,
@@ -180,5 +184,6 @@ def make_plot(stats_by_force, figname, free_to_complex_rates) -> None:
     :param free_to_complex_rates:
     :return: None
     """
+    # TODO: update docstring and typing
     plot_MW_stats_list(*stats_by_force, free_to_complex_rates)
     plt.savefig(figname)

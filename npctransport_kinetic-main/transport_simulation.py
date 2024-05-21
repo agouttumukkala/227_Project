@@ -22,6 +22,7 @@ def register_update_functions(cls):
     Methods registered will be added to a class variable list called '_update_funcs'
     To register a function, use the decorator 'register_update()' defined below.
     """
+    # TODO: update docstring and typing
     cls._update_funcs = []
     for methodname in dir(cls):
         method = getattr(cls, methodname)
@@ -38,7 +39,7 @@ def register_update(active: bool = True):
     A function which created a decorator that adds a function a bool attribute called '_update_func'
     with the value 'active'
     """
-
+    # TODO: update docstring and typing
     def wrapper(func):
         func._update_func = active
         return func
@@ -47,6 +48,7 @@ def register_update(active: bool = True):
 
 
 def register_move_nmol(T_list, src, dst, nmol):
+    # TODO: update docstring and typing
     T_list.append((src, dst, nmol))
 
 
@@ -143,6 +145,7 @@ class TransportSimulation:
         @param Ran_cell_M - total Ran concentration in cell
         @param GTP_N, GTP_C, GDP_N, GDP_C - relative quantities of all Ran species in nucleus (N) and cytoplasm (N)
         """
+        # TODO: update docstring and typing
         global N_A
         RAN_distribution = np.array([parts_GTP_N, parts_GTP_C,
                                      parts_GDP_N, parts_GDP_C])
@@ -156,7 +159,8 @@ class TransportSimulation:
     def reset_cargo_concentration(self, cargo_cytoplasmic_M: float, fraction_bound: float = 0.0) -> None:
         """
         Resets all cargo concentrations to 0 and sets the cytoplasmic cargo concentrations based on params provided
-        :param cargo_cytoplasmic_M: total concentration (in molar) of labeled cargo (bounded and unbound) in the cytoplasm
+        :param cargo_cytoplasmic_M: total concentration (in molar) of labeled cargo (bounded and unbound) in the
+                                    cytoplasm
         :param fraction_bound: fraction of labeled cargo bound to importin to form cargo-importin complex
         :return: None
         """
@@ -198,8 +202,8 @@ class TransportSimulation:
         """
         Changes nuclear volume
         :param v_L: new volume in liters
-        :param fix_concentration: whether to rescale number of nuclear molecules to
-                                  fix nuclear (not cellular) concentration.
+        :param fix_concentration: whether to rescale number of nuclear molecules to fix nuclear (not cellular)
+                                  concentration
         :return: None
         """
         print(f"change v_N_L from {self.v_N_L} to {v_L}")
@@ -215,8 +219,8 @@ class TransportSimulation:
         """
         Changes cytoplasmic volume
         :param v_L: new volume in liters
-        :param fix_concentration: whether to rescale number of cytoplasmic molecules to
-                                  fix cytoplasmic (not cellular) concentration
+        :param fix_concentration: whether to rescale number of cytoplasmic molecules to fix cytoplasmic (not cellular)
+                                  concentration
         :return: None
         """
         print(f"change v_C_L from {self.v_C_L} to {v_L}")
@@ -272,8 +276,9 @@ class TransportSimulation:
     ###################
     def set_passive_nuclear_molar_rate_per_sec(self, rate_per_sec: float) -> None:
         """
-        Sets the parameter max_passive_diffusion_rate_nmol_per_sec_per_M such that the passive component of
+        Sets the parameter for maximum passive rate of nuclear diffusion such that the passive component of
         d[N]/dt is rate_per_sec*([C]-[N])
+        :param rate_per_sec: the max rate of passive diffusion in number of molecules/(second*M)
         :return: None
         """
         self.max_passive_diffusion_rate_nmol_per_sec_per_M = \
@@ -281,8 +286,9 @@ class TransportSimulation:
 
     def set_passive_cytoplasmic_molar_rate_per_sec(self, rate_per_sec: float) -> None:
         """
-        Sets the parameter max_passive_diffusion_rate_nmol_per_sec_per_M such that the passive component of
+        Sets the parameter for maximum passive rate of cytoplasmic diffusion such that the passive component of
         d[C]/dt is rate_per_sec*([C]-[N])
+        :param rate_per_sec: the max rate of passive diffusion in number of molecules/(second*M)
         :return: None
         """
         self.max_passive_diffusion_rate_nmol_per_sec_per_M = \
@@ -290,6 +296,7 @@ class TransportSimulation:
 
     def set_params(self, **kwargs) -> None:
         """
+        Sets attribute values for the transport simulation given parameter names and values
         :return: None
         """
         for param, value in kwargs.items():
@@ -309,7 +316,8 @@ class TransportSimulation:
 
     def _init_simulation_parameters(self, **kwargs) -> None:
         """
-
+        Adds some default attributes to the simulation while also adding in some user-defined attributes from
+        user-defined function parameters. Runs when running the init method
         :return: None
         """
         # TODO: add all simulation parameters here with proper units
@@ -345,7 +353,6 @@ class TransportSimulation:
         Set initial state of the simulation
         :param v_C_L: the cytoplasmic volume in liters
         :param v_N_L: the nuclear volume in liters
-        :return:
         """
         self._init_simulation_parameters(**kwargs)
         self.sim_time_sec = 0.0
@@ -385,6 +392,7 @@ class TransportSimulation:
                                                                                                                    
         Return: dictionary with number of molecules to add/subtract from each species                              
         """
+        # TODO: update docstring and typing
         #return float(int(np.power(nmol_GTP_N/max_RAN, 5)*nmol_NPC))                                               
         f = self.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec \
             * self.get_concentration_M("GTP_N") \
@@ -413,6 +421,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         f_GTP = self.fraction_complex_N_to_free_N_per_M_GTP_per_sec * self.get_concentration_M("GTP_N") * self.dt_sec
         f_no_GTP = (1.0 - f_GTP) * self.rate_complex_to_free_per_sec * self.dt_sec  # non-GTP dependent undocking from remaining fraction
         f = f_GTP + f_no_GTP
@@ -441,6 +450,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         n1 = self.rate_GDP_N_to_GTP_N_per_sec * self.nmol["GDP_N"] * self.dt_sec
         n2 = self.rate_GTP_N_to_GDP_N_per_sec * self.nmol["GTP_N"] * self.dt_sec
         n = n1 - n2
@@ -456,6 +466,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         n = self.rate_GTP_C_to_GDP_C_per_sec \
             * self.nmol["GTP_C"] \
             * self.dt_sec
@@ -471,7 +482,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
-
+        # TODO: update docstring and typing
         n = self.rate_GTP_N_to_GTP_C_per_sec \
             * self.nmol["GTP_N"] \
             * self.dt_sec
@@ -487,6 +498,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         n1 = self.rate_GDP_C_to_GDP_N_per_sec * self.nmol["GDP_C"] * self.dt_sec
         n2 = self.rate_GDP_N_to_GDP_C_per_sec * self.nmol["GDP_N"] * self.dt_sec
         n = n1 - n2
@@ -502,6 +514,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         f = self.rate_complex_to_free_per_sec \
             * self.dt_sec
         nL = f * self.nmol["complexL_C"]
@@ -525,6 +538,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         f = self.rate_free_to_complex_per_sec \
             * self.dt_sec
         nL = f * self.nmol["freeL_C"]
@@ -548,6 +562,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         f = self.rate_free_to_complex_per_sec \
             * self.dt_sec
         nL = f * self.nmol["freeL_N"]
@@ -575,6 +590,7 @@ class TransportSimulation:
         # and cytoplasmic volumes, number of NPCs etc. - here we ignore this for now
         # - we can change it in future based on theoretical equations of passive diffusion
         """
+        # TODO: update docstring and typing
         # Comment: competition is assumed to have zero effect at this time
         bound_dock_sites = sum([self.nmol[key] for key in self.nmol if "NPC" in key])
         fraction_bound_dock_sites_NPC = bound_dock_sites / self.NPC_dock_sites
@@ -612,6 +628,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         bound_dock_sites = sum([self.nmol[key] for key in self.nmol if "NPC" in key])
         nmol_free_sites_NPC = (self.NPC_dock_sites - bound_dock_sites)
         f = nmol_free_sites_NPC \
@@ -663,6 +680,7 @@ class TransportSimulation:
         """
         Number of molecules passing between the N side and C side of the NPC (or vice versa)
         """
+        # TODO: update docstring and typing
         # Note - Delta is the solution to the differential equation
         # for bidirectional movement from one side to another very
         # similarly to Fick's law. If we have n1 molecules on one side
@@ -697,6 +715,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         f = self.fraction_complex_NPC_to_complex_N_C_per_sec \
             * self.dt_sec  # fractions are fine (conceptually, a random variable)
 
@@ -718,6 +737,7 @@ class TransportSimulation:
 
         Return: dictionary with number of molecules to add/subtract from each species
         """
+        # TODO: update docstring and typing
         global N_A
         if self.sim_time_sec <= self.bleach_start_time_sec:
             return {}
@@ -753,6 +773,7 @@ class TransportSimulation:
                       molecules from a molecular species src to the molecular species dst
         :return: a dictionary mapping from molecular species to total change in counts
         """
+        # TODO: update docstring and typing
         T = {}
         for src, dst, nmol in T_list:
             if src in T:
@@ -772,6 +793,7 @@ class TransportSimulation:
         Compute a summary of the gross number of cargo molecules imported and exported.
         Should be called BEFORE transitions are updated
         """
+        # TODO: update docstring and typing
         # TODO this is a hack - make it better
         active_import = {"L": 0, "U": 0}
         passive_import = {"L": 0, "U": 0}
@@ -836,6 +858,7 @@ class TransportSimulation:
         Update all state variables over a single time step
         :return: None
         """
+        # TODO: update docstring and typing
         # Compute transitions:
         T_list = []
         for update_rule in self._update_funcs:
@@ -861,11 +884,14 @@ class TransportSimulation:
                     # Update simulation clock:
         self.sim_time_sec += self.dt_sec
 
-    def simulate(self, sim_time_sec, nskip_statistics=1):
+    def simulate(self, sim_time_sec: float, nskip_statistics=1):
         """
         simulate for approximately (and at least) sim_time_sec seconds
-        @return actual time simulated
+        :param sim_time_sec:
+        :param nskip_statistics:
+        :return: actual time simulated
         """
+        # TODO: update docstring and typing
         # Computes number of steps and frames
         nsteps = int(np.ceil(sim_time_sec / self.dt_sec))
         nframes = ((nsteps - 1) // nskip_statistics) + 1

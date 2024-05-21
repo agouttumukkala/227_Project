@@ -24,6 +24,7 @@ def parse_args():
     """
 
     """
+    # TODO: update docstring and typing
     parser = argparse.ArgumentParser(description=main_description, epilog=epilogue)
     parser.add_argument("-np", "--n-passive", type=int, default=10,
                         help="the number of values in the range --passive-range to run")
@@ -71,8 +72,8 @@ def get_param_range_traverse_kon(nx: int, ny: int, npc_traverse_range: tuple = (
     :param ny: number of values used to discretize k_on_range
     :param npc_traverse_range: tuple of the min and max values for the NPC traverse rate range
     :param k_on_range: tuple of the min and max values for the free-to-complex rate range
-    :return: dictionary containing information on the discrete NPC traverse rates and free-to-complex rates to be
-             modelled
+    :return: dictionary containing information on the discrete NPC traverse rates (x-axis) and free-to-complex rates
+             (y-axis) to be modelled
     """
     param_range = {}
     print(f"nx={nx} ny={ny}")
@@ -99,6 +100,7 @@ def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
     :param v_C_L: cytoplasm volume in liters
     :return:
     """
+    # TODO: update docstring and typing
     ts = transport_simulation.TransportSimulation(v_N_L=v_N_L,
                                                   v_C_L=v_C_L)
     ts.set_time_step(0.1e-3)
@@ -143,6 +145,7 @@ def plot_stats_grids(stats_grids, transport_simulation, param_range,
     :param vmax_import_export:
     :return: None
     """
+    # TODO: update docstring and typing
     fig, axes = plt.subplots(3, 3, figsize=(14, 10), sharex=True, sharey=True)
     # N/C
     plt.sca(axes[0, 0])
@@ -222,6 +225,7 @@ def transport_simulation_generator(passive: float, Ran_cell_M: float, c_M: float
     :param c_M:
     :return:
     """
+    # TODO: update docstring and typing
     print(f"Ran: {Ran_cell_M:.6f} M")
     return get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec=passive,
                                                Ran_cell_M=Ran_cell_M,
@@ -256,10 +260,11 @@ def get_stats_on_grid(output,
     :param Ran_concentration_M:
     :param v_N_L:
     :param v_C_L:
-    :param equilibration_time_sec:
+    :param equilibration_time_sec: equilibration time in seconds
     :param pickle_file:
     :return: None
     """
+    # TODO: update docstring and typing
     param_range = get_param_range_traverse_kon(nx, ny,
                                                npc_traverse_range,
                                                k_on_range)
