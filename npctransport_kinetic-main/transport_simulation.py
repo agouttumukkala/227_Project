@@ -10,6 +10,7 @@ CHECKS = False
 def fL_to_L(v_fL: float) -> float:
     """
     Converts femtoliters to liters
+
     :param v_fL: volume in femtoliters
     :return: liter value corresponded to given femtoliter value
     """
@@ -21,8 +22,9 @@ def register_update_functions(cls):
     A class decorator that allows registering methods. 
     Methods registered will be added to a class variable list called '_update_funcs'
     To register a function, use the decorator 'register_update()' defined below.
+
+    :param cls: the desired class to be decorated
     """
-    # TODO: update docstring and typing
     cls._update_funcs = []
     for methodname in dir(cls):
         method = getattr(cls, methodname)
@@ -37,18 +39,32 @@ def register_update_functions(cls):
 def register_update(active: bool = True):
     """
     A function which created a decorator that adds a function a bool attribute called '_update_func'
-    with the value 'active'
+    with the value 'active' This is used to tag functions that can update the species transition list during the
+    simulation
+
+    :param active: whether the function is a function that updates the transition list
     """
-    # TODO: update docstring and typing
     def wrapper(func):
+        """
+        Wrapper function that adds an _update_func attribute to the function that is passed in
+        """
         func._update_func = active
         return func
 
     return wrapper
 
 
-def register_move_nmol(T_list, src, dst, nmol):
-    # TODO: update docstring and typing
+def register_move_nmol(T_list: list, src: str, dst: str, nmol: float) -> None:
+    """
+    Appends a species transition to the species transition list
+
+    :param T_list: a list of tuples (src, dst, nmol), each representing a transition of a number of molecules (nmol)
+                       from a molecular species source (src) to a molecular species destination (dst)
+    :param src: the source species
+    :param dst: the destination species
+    :param nmol: the number of molecules
+    :return: None
+    """
     T_list.append((src, dst, nmol))
 
 
@@ -62,6 +78,7 @@ class TransportSimulation:
     def set_nmol(self, species: str, value: float) -> None:
         """
         Saves the molecule value for a given species
+
         :param species: species tag
         :param value: number of molecules of the given species
         :return: None
@@ -71,6 +88,7 @@ class TransportSimulation:
     def get_nmol(self, species: str) -> float:
         """
         Returns the number of molecules of a given species in its compartment
+
         :param species: species tag
         """
         return self.nmol[species]
@@ -78,6 +96,7 @@ class TransportSimulation:
     def get_compartment(self, species: str) -> any:
         """
         Determines the compartment associated with a given species tag
+
         :param species: species tag
         :return: string containing N,C, or NPC, None if species tag is irregular
         """
@@ -93,6 +112,7 @@ class TransportSimulation:
     def get_compartment_volume_L(self, species: str) -> float:
         """
         Returns the volume of the comportment for a species given the species tag
+
         :param species: species tag
         :return: volume (in liters) of the species compartment
         """
@@ -109,6 +129,7 @@ class TransportSimulation:
     def set_concentration_M(self, species: str, c_M: float) -> None:
         """
         Stores the number of molecules of specified species given its concentration
+
         :param species: species tag
         :param c_M: concentration (in molar) of the species in its compartment
         :return: None
@@ -123,6 +144,7 @@ class TransportSimulation:
     def get_concentration_M(self, species: str) -> float:
         """
         Calculates the concentration of specified species in its compartment
+
         :param species: species tag
         :return: concentration (in molar) of the given species in its compartment
         :raise ValueError: if compartment has no volume
@@ -133,19 +155,18 @@ class TransportSimulation:
             raise ValueError(f"Volume for compartment of {species} is 0!")
         return self.nmol[species] / (N_A * v_L)
 
-    def set_RAN_distribution(self,
-                             Ran_cell_M,
-                             parts_GTP_N,
-                             parts_GTP_C,
-                             parts_GDP_N,
-                             parts_GDP_C):
+    def set_RAN_distribution(self, Ran_cell_M: float, parts_GTP_N: float, parts_GTP_C: float, parts_GDP_N: float,
+                             parts_GDP_C: float) -> None:
         """
-        Sets the RAN distribution among compartments based on relative parts specified, s.t. total concentration is constant
+        Sets the RAN distribution among compartments based on relative parts specified, s.t. total number of RAN
+        molecules is constant
 
-        @param Ran_cell_M - total Ran concentration in cell
-        @param GTP_N, GTP_C, GDP_N, GDP_C - relative quantities of all Ran species in nucleus (N) and cytoplasm (N)
+        :param Ran_cell_M: total Ran concentration in the nucleus and cytoplasm combined (in M)
+        :param parts_GTP_N: number of GTP parts in the nucleus
+        :param parts_GTP_C: number of GTP parts in the cytoplasm
+        :param parts_GDP_N: number of GDP parts in the nucleus
+        :param parts_GDP_C: number of GDP parts in the cytoplasm
         """
-        # TODO: update docstring and typing
         global N_A
         RAN_distribution = np.array([parts_GTP_N, parts_GTP_C,
                                      parts_GDP_N, parts_GDP_C])
@@ -159,6 +180,7 @@ class TransportSimulation:
     def reset_cargo_concentration(self, cargo_cytoplasmic_M: float, fraction_bound: float = 0.0) -> None:
         """
         Resets all cargo concentrations to 0 and sets the cytoplasmic cargo concentrations based on params provided
+
         :param cargo_cytoplasmic_M: total concentration (in molar) of labeled cargo (bounded and unbound) in the
                                     cytoplasm
         :param fraction_bound: fraction of labeled cargo bound to importin to form cargo-importin complex
@@ -201,6 +223,7 @@ class TransportSimulation:
     def set_v_N_L(self, v_L: float, fix_concentration: bool) -> None:
         """
         Changes nuclear volume
+
         :param v_L: new volume in liters
         :param fix_concentration: whether to rescale number of nuclear molecules to fix nuclear (not cellular)
                                   concentration
@@ -218,6 +241,7 @@ class TransportSimulation:
     def set_v_C_L(self, v_L: float, fix_concentration: bool) -> None:
         """
         Changes cytoplasmic volume
+
         :param v_L: new volume in liters
         :param fix_concentration: whether to rescale number of cytoplasmic molecules to fix cytoplasmic (not cellular)
                                   concentration
@@ -253,6 +277,7 @@ class TransportSimulation:
     def set_time_step(self, dt_sec: float) -> None:
         """
         Sets time step for simulation
+
         :param dt_sec: the time step (in seconds) for each interation of the simulation
         :return: None
         """
@@ -267,6 +292,7 @@ class TransportSimulation:
     def reset_simulation_time(self) -> None:
         """
         Resets simulation time value back to 0
+
         :return: None
         """
         self.sim_time_sec = 0.0
@@ -278,6 +304,7 @@ class TransportSimulation:
         """
         Sets the parameter for maximum passive rate of nuclear diffusion such that the passive component of
         d[N]/dt is rate_per_sec*([C]-[N])
+
         :param rate_per_sec: the max rate of passive diffusion in number of molecules/(second*M)
         :return: None
         """
@@ -288,6 +315,7 @@ class TransportSimulation:
         """
         Sets the parameter for maximum passive rate of cytoplasmic diffusion such that the passive component of
         d[C]/dt is rate_per_sec*([C]-[N])
+
         :param rate_per_sec: the max rate of passive diffusion in number of molecules/(second*M)
         :return: None
         """
@@ -297,6 +325,7 @@ class TransportSimulation:
     def set_params(self, **kwargs) -> None:
         """
         Sets attribute values for the transport simulation given parameter names and values
+
         :return: None
         """
         for param, value in kwargs.items():
@@ -308,6 +337,7 @@ class TransportSimulation:
                            ) -> None:
         """
         Sets the total number of dock sites for cargo-importin complex on NPCs
+
         :param n_NPCs: total number of nuclear pore complexes
         :param n_dock_sites_per_NPC: number of dock sites for cargo-importin complex per NPC
         :return: None
@@ -318,6 +348,7 @@ class TransportSimulation:
         """
         Adds some default attributes to the simulation while also adding in some user-defined attributes from
         user-defined function parameters. Runs when running the init method
+
         :return: None
         """
         # TODO: add all simulation parameters here with proper units
@@ -331,6 +362,7 @@ class TransportSimulation:
         self.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 0.005e+6  # TODO: this is doubled relative to complex_N to free_N
         self.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 0.005e+6
         self.fraction_complex_NPC_to_complex_N_C_per_sec = 1.0  # Leakage parameter
+        # TODO: look into some missing rates here (GTP_C to GTP_N, GDP_C to GTP_C (these may not happen, but need to investigate))
         self.rate_GDP_N_to_GTP_N_per_sec = 200.0
         self.rate_GTP_N_to_GDP_N_per_sec = 0.2
         self.rate_GTP_C_to_GDP_C_per_sec = 500.0
@@ -385,18 +417,19 @@ class TransportSimulation:
     ########################
 
     @register_update()
-    def get_nmol_complex_NPC_to_free_N(self, T_list) -> None:
+    def get_nmol_complex_NPC_to_free_N(self, T_list: list) -> None:
         """                                                                                                        
-        Number of labeled cargo molecules released from the NPC to the nucleus over a self.dt_sec time step        
-        (Note: it is assumed each undocking leads to export of a single RanGTP molecule)                           
-                                                                                                                   
-        Return: dictionary with number of molecules to add/subtract from each species                              
+        Computes the number of complexed cargo molecules (labeled and unlabeled) released from the NPC into the nucleus
+        to become free cargo molecules over the dt time step and updates the transition list accordingly
+        (Note: It is assumed each undocking leads to export of a single RanGTP molecule out of the nucleus and list is
+               updated accordingly)
+
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
-        #return float(int(np.power(nmol_GTP_N/max_RAN, 5)*nmol_NPC))                                               
-        f = self.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec \
-            * self.get_concentration_M("GTP_N") \
-            * self.dt_sec
+        #return float(int(np.power(nmol_GTP_N/max_RAN, 5)*nmol_NPC))
+        f = self.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec * self.get_concentration_M("GTP_N") * self.dt_sec
         n_GTP = 0
         for suffix in ["import", "export"]:
             for label in ["L", "U"]:
@@ -414,14 +447,18 @@ class TransportSimulation:
                            nmol=n_GTP)
 
     @register_update()
-    def get_nmol_complex_N_to_free_N(self, T_list) -> None:
+    def get_nmol_complex_N_to_free_N(self, T_list: list) -> None:
         """
-        Number of labeled cargo molecules that disassemble in the nucleus over a self.dt_sec time step
+        Computes the number of complexed cargo molecules (labeled and unlabeled) that disassemble in the nucleus over
+        the dt time step and updates the transition list accordingly
+
+        #TODO: figure out why GTP is updated here. I think this is passive diffusion and dissociation
         Note: it is assumed each GTP-dependent undocking leads to export of a single RanGTP molecule instantaneously
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
         f_GTP = self.fraction_complex_N_to_free_N_per_M_GTP_per_sec * self.get_concentration_M("GTP_N") * self.dt_sec
         f_no_GTP = (1.0 - f_GTP) * self.rate_complex_to_free_per_sec * self.dt_sec  # non-GTP dependent undocking from remaining fraction
         f = f_GTP + f_no_GTP
@@ -444,13 +481,15 @@ class TransportSimulation:
                            nmol=n_GTP)
 
     @register_update()
-    def get_nmol_GDP_N_to_GTP_N(self, T_list) -> None:
+    def get_nmol_GDP_N_to_GTP_N(self, T_list: list) -> None:
         """
-        Number of GDP molecules in the nucleus converted to GTP
+        Computes the net number of GDP molecules in the nucleus converted to GTP over the dt time step and updates the
+        transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
         n1 = self.rate_GDP_N_to_GTP_N_per_sec * self.nmol["GDP_N"] * self.dt_sec
         n2 = self.rate_GTP_N_to_GDP_N_per_sec * self.nmol["GTP_N"] * self.dt_sec
         n = n1 - n2
@@ -460,45 +499,47 @@ class TransportSimulation:
                            nmol=n)
 
     @register_update()
-    def get_nmol_GTP_C_to_GDP_C(self, T_list) -> None:
+    def get_nmol_GTP_C_to_GDP_C(self, T_list: list) -> None:
         """
-        Number of GTP molecules in the cytoplasm converted to GDP
+        Computes the number of GTP molecules in the cytoplasm converted to GDP and updates the transition list
+        accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
-        n = self.rate_GTP_C_to_GDP_C_per_sec \
-            * self.nmol["GTP_C"] \
-            * self.dt_sec
+        n = self.rate_GTP_C_to_GDP_C_per_sec * self.nmol["GTP_C"] * self.dt_sec
         register_move_nmol(T_list,
                            src="GTP_C",
                            dst="GDP_C",
                            nmol=n)
 
     @register_update()
-    def get_nmol_GTP_N_to_GTP_C(self, T_list) -> None:
+    def get_nmol_GTP_N_to_GTP_C(self, T_list: list) -> None:
         """
-        Number of GTP molecules exported from the nucleus
+        Computes the number of GTP molecules exported from the nucleus to the cytoplasm over the dt time step and
+        updates the transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
-        n = self.rate_GTP_N_to_GTP_C_per_sec \
-            * self.nmol["GTP_N"] \
-            * self.dt_sec
+        n = self.rate_GTP_N_to_GTP_C_per_sec * self.nmol["GTP_N"] * self.dt_sec
         register_move_nmol(T_list,
                            src="GTP_N",
                            dst="GTP_C",
                            nmol=n)
 
     @register_update()
-    def get_nmol_GDP_C_to_GDP_N(self, T_list) -> None:
+    def get_nmol_GDP_C_to_GDP_N(self, T_list: list) -> None:
         """
-        Number of GDP molecules imported to the nucleus
+        Computes the net number of GDP molecules imported from the cytoplasm into the nucleus over the dt time step and
+        updates the transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
         n1 = self.rate_GDP_C_to_GDP_N_per_sec * self.nmol["GDP_C"] * self.dt_sec
         n2 = self.rate_GDP_N_to_GDP_C_per_sec * self.nmol["GDP_N"] * self.dt_sec
         n = n1 - n2
@@ -508,15 +549,16 @@ class TransportSimulation:
                            nmol=n)
 
     @register_update()
-    def get_nmol_complex_C_to_free_C(self, T_list) -> None:
+    def get_nmol_complex_C_to_free_C(self, T_list: list) -> None:
         """
-        The number of cargo-importin complexes that unbind importin over time step dt_sec
+        Computes the number of cargo-importin complexes (both labeled and unlabeled) in the cytoplasm that unbind
+        importin over the dt time step and updates the transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
-        f = self.rate_complex_to_free_per_sec \
-            * self.dt_sec
+        f = self.rate_complex_to_free_per_sec * self.dt_sec
         nL = f * self.nmol["complexL_C"]
         nU = f * self.nmol["complexU_C"]
         assert (nL <= self.nmol["complexL_C"])
@@ -531,16 +573,16 @@ class TransportSimulation:
                            nmol=nU)
 
     @register_update()
-    def get_nmol_free_C_to_complex_C(self, T_list) -> None:  # assume importin is not rate limiting
+    def get_nmol_free_C_to_complex_C(self, T_list: list) -> None:  # assume importin is not rate limiting
         """
-        The number of the labeled molecules that bind to importin over time step dt_sec
-        in the cytoplasm
+        Computes the number of the cargo molecules in the cytoplasm (labeled and unlabeled) that bind to importin over
+        the dt time step and updates the transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
-        f = self.rate_free_to_complex_per_sec \
-            * self.dt_sec
+        f = self.rate_free_to_complex_per_sec * self.dt_sec
         nL = f * self.nmol["freeL_C"]
         nU = f * self.nmol["freeU_C"]
         assert (nL <= self.nmol["freeL_C"])
@@ -555,16 +597,16 @@ class TransportSimulation:
                            nmol=nU)
 
     @register_update()
-    def get_nmol_free_N_to_complex_N(self, T_list) -> None:  # assume importin is not rate limiting
+    def get_nmol_free_N_to_complex_N(self, T_list: list) -> None:  # assume importin is not rate limiting
         """
-        The number of the labeled molecules that bind to importin over time step dt_sec
-        in the nucleus
+        Computes the number of the cargo molecules in the nucleus (labeled and unlabeled) that bind to importin over the
+        dt time step and updates the transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
-        f = self.rate_free_to_complex_per_sec \
-            * self.dt_sec
+        f = self.rate_free_to_complex_per_sec * self.dt_sec
         nL = f * self.nmol["freeL_N"]
         nU = f * self.nmol["freeU_N"]
         assert (nL <= self.nmol["freeL_N"])
@@ -579,18 +621,20 @@ class TransportSimulation:
                            nmol=nU)
 
     @register_update()
-    def get_free_N_to_free_C(self, T_list) -> None:  # passive
+    def get_free_N_to_free_C(self, T_list: list) -> None:  # passive
         """
-        Computes the net number of unbound molecules in the nucleus that passively export 
-        to the cytoplasm per second (net = export - import)
+        Computes the number of unbound molecules that passively export to the cytoplasm and import to the nucleus over
+        the dt time step (both labeled and unlabeled) and updates the transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
 
         # COMMENT: a proper treatment of this would depend on ratio between nuclear 
         # and cytoplasmic volumes, number of NPCs etc. - here we ignore this for now
         # - we can change it in future based on theoretical equations of passive diffusion
         """
-        # TODO: update docstring and typing
+        # TODO: doublecheck the comment above and below. I think they addressed parts of these comments
         # Comment: competition is assumed to have zero effect at this time
         bound_dock_sites = sum([self.nmol[key] for key in self.nmol if "NPC" in key])
         fraction_bound_dock_sites_NPC = bound_dock_sites / self.NPC_dock_sites
@@ -621,20 +665,20 @@ class TransportSimulation:
                            nmol=nU_import)
 
     @register_update()
-    def get_nmol_complex_N_C_to_complex_NPC(self, T_list) -> None:
+    def get_nmol_complex_N_C_to_complex_NPC(self, T_list: list) -> None:
         """
-        Computes the number of molecules that bind to the NPC from the nucleus
-        over dt_sec time step (These will all be bound to importin)
+        Computes the number of cargo-importin complexed molecules (labeled and unlabeled) that bind to the NPC on the
+        nuclear or cytoplasmic side from the nucleus and cytoplasm (respectively) over the dt time step and updates the
+        transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
         bound_dock_sites = sum([self.nmol[key] for key in self.nmol if "NPC" in key])
         nmol_free_sites_NPC = (self.NPC_dock_sites - bound_dock_sites)
-        f = nmol_free_sites_NPC \
-            * self.rate_complex_to_NPC_per_free_site_per_sec_per_M \
-            * self.dt_sec
-        # TODO: debug - something is weird here (BR Dec 11,2020)
+        f = nmol_free_sites_NPC * self.rate_complex_to_NPC_per_free_site_per_sec_per_M * self.dt_sec
+        # TODO: debug - something is weird here (BR Dec 11,2020) (I think this is fixed but...)
         cL_N_M = self.get_concentration_M("complexL_N")
         cL_C_M = self.get_concentration_M("complexL_C")
         cU_N_M = self.get_concentration_M("complexU_N")
@@ -676,11 +720,15 @@ class TransportSimulation:
                            nmol=nU_C)
 
     @register_update()
-    def get_nmol_complex_NPC_traverse(self, T_list) -> None:
+    def get_nmol_complex_NPC_traverse(self, T_list: list) -> None:
         """
-        Number of molecules passing between the N side and C side of the NPC (or vice versa)
+        Computes the number of complexed cargo molecules (labeled and unlabeled) passing from the nuclear side and
+        cytoplasmic side of the NPC (or vice versa) and updates the transition list accordingly
+
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
         # Note - Delta is the solution to the differential equation
         # for bidirectional movement from one side to another very
         # similarly to Fick's law. If we have n1 molecules on one side
@@ -691,6 +739,7 @@ class TransportSimulation:
         # then the net fraction of molecules traversing from one side
         # to the other over dt_sec seconds is thus half of (1.0 -
         # Delta_fractional)
+        # TODO: figure out why this one is different than the other ones
         Delta_fractional = np.exp(-self.fraction_complex_NPC_traverse_per_sec * self.dt_sec)
         f = 0.5 * (1 - Delta_fractional)
         #        f= min(f, 0.5) # Note: if f is larger than 0.5, traversal time through NPC >> dt_sec, so we assume it just equilibrates (it can't be rate limiting if all other processes are slow relative to dt_sec) - see TODO above
@@ -708,16 +757,17 @@ class TransportSimulation:
                                        nmol=n)
 
     @register_update()
-    def get_nmol_complex_NPC_to_complex_N_C(self, T_list) -> None:
+    def get_nmol_complex_NPC_to_complex_N_C(self, T_list: list) -> None:
         """
-        Number of complexed cargo-importin released from the nuclear and cytoplasmic
-        ends of the NPC to the nucleus and cytoplasm, respectively
+        Computes the number of complexed cargo-importin (labeled and unlabeled) released from the nuclear and
+        cytoplasmic ends of the NPC to the nucleus and cytoplasm, respectively, over the dt time step and updates the
+        transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
-        f = self.fraction_complex_NPC_to_complex_N_C_per_sec \
-            * self.dt_sec  # fractions are fine (conceptually, a random variable)
+        f = self.fraction_complex_NPC_to_complex_N_C_per_sec * self.dt_sec  # fractions are fine (conceptually, a random variable)
 
         for label in ["L", "U"]:
             for compartment in ["N", "C"]:
@@ -731,16 +781,18 @@ class TransportSimulation:
                                        nmol=n)
 
     @register_update()
-    def get_nmol_cargo_bleached(self, T_list):
+    def get_nmol_cargo_bleached(self, T_list: list) -> None:
         """
-        Number of bleached molecules over time step in cytoplasm (both free and complexed)
+        Computes the number of fluorescent cargo molecules that have become bleached over the dt time step (both free
+        and complexed) and updates the transition list accordingly
 
-        Return: dictionary with number of molecules to add/subtract from each species
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
         global N_A
         if self.sim_time_sec <= self.bleach_start_time_sec:
-            return {}
+            return
         f = self.bleach_volume_L_per_sec \
             * N_A \
             * self.dt_sec
@@ -767,13 +819,12 @@ class TransportSimulation:
 
     def get_nmol_T_summary(self, T_list: list) -> dict:
         """
-        Summarize all transition by summing over a list of tuples of transitions
+        Summarize all transitions by consolidating the transition list into a species-change dictionary
 
-        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of nmol
-                      molecules from a molecular species src to the molecular species dst
-        :return: a dictionary mapping from molecular species to total change in counts
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transition of a number of molecules (nmol)
+                       from a molecular species source (src) to a molecular species destination (dst)
+        :return: a dictionary mapping from molecular species to total change in number of molecules
         """
-        # TODO: update docstring and typing
         T = {}
         for src, dst, nmol in T_list:
             if src in T:
@@ -788,12 +839,16 @@ class TransportSimulation:
 
         return T
 
-    def get_import_export_summary(self, T_list) -> None:
+    def get_import_export_summary(self, T_list: list) -> None:
         """
-        Compute a summary of the gross number of cargo molecules imported and exported.
+        Compute a summary of the gross number of cargo molecules imported and exported and update the values for import
+        and export rates of the cargo molecule in the nmol dictionary.
         Should be called BEFORE transitions are updated
+
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transition of a number of molecules (nmol)
+                       from a molecular species source (src) to a molecular species destination (dst)
+        :return: None
         """
-        # TODO: update docstring and typing
         # TODO this is a hack - make it better
         active_import = {"L": 0, "U": 0}
         passive_import = {"L": 0, "U": 0}
@@ -855,10 +910,10 @@ class TransportSimulation:
 
     def do_one_time_step(self) -> None:
         """
-        Update all state variables over a single time step
+        Updates all state variables over a single time step
+
         :return: None
         """
-        # TODO: update docstring and typing
         # Compute transitions:
         T_list = []
         for update_rule in self._update_funcs:
@@ -884,14 +939,14 @@ class TransportSimulation:
                     # Update simulation clock:
         self.sim_time_sec += self.dt_sec
 
-    def simulate(self, sim_time_sec: float, nskip_statistics=1):
+    def simulate(self, sim_time_sec: float, nskip_statistics: int = 1) -> dict:
         """
-        simulate for approximately (and at least) sim_time_sec seconds
-        :param sim_time_sec:
-        :param nskip_statistics:
-        :return: actual time simulated
+        Simulate for approximately (and at least) sim_time_sec seconds
+
+        :param sim_time_sec: time interval (in seconds) for which the simulation is run
+        :param nskip_statistics: time step interval to record data (e.g. 2 is every two time steps)
+        :return: dictionary with that contain the values for each species at each time point frame
         """
-        # TODO: update docstring and typing
         # Computes number of steps and frames
         nsteps = int(np.ceil(sim_time_sec / self.dt_sec))
         nframes = ((nsteps - 1) // nskip_statistics) + 1
@@ -925,6 +980,7 @@ class TransportSimulation:
         def is_cargoL(s: str) -> bool:
             """
             Returns whether species contains labeled cargo (can be in complex or free)
+
             :param s: species tag
             """
             return s.startswith("freeL_") or s.startswith("complexL_")
@@ -938,6 +994,7 @@ class TransportSimulation:
         def is_cargoU(s: str) -> bool:
             """
             Returns whether species contains unlabeled cargo (can be in complex or free)
+
             :param s: species tag
             """
             return s.startswith("freeU_") or s.startswith("complexU_")
