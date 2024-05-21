@@ -15,6 +15,7 @@
 
 # %%
 import multiprocessing
+import pdb
 import matplotlib.axes
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,15 +27,18 @@ import pandas as pd
 N_A = 6.022e+23  # Avogadro's number
 
 
-def get_tau_passive_diffusion(nmol_per_sec_per_M, volume_L):
+def get_tau_passive_diffusion(nmol_per_sec_per_M: float, volume_L: float) -> float:
     """
     This utility function computes tau for one-sided passive diffusion
     specified in number of molecules per second per M, given
     the volume from which the passive diffusion leaves
+
+    :param nmol_per_sec_per_M: passive diffusion rate (in units number of molecules/sec/M)
+    :param volume_L: initial volume for diffusion (in liters)
+    :return: characteristic time (in sec)
     TODO: is this needed anywhere?
+    TODO: need to check this one
     """
-    # TODO: update docstring and typing
-    pdb.set_trace()
     global N_A
     gamma = nmol_per_sec_per_M / N_A / volume_L
     tau = 1.0 / gamma
@@ -43,10 +47,10 @@ def get_tau_passive_diffusion(nmol_per_sec_per_M, volume_L):
 
 def get_new_transport_simulation(**kwargs) -> transport_simulation.TransportSimulation:
     """
+    Generates a new transport simulation given a set of params
 
-    :return:
+    :return: a new transport simulation instance
     """
-    # TODO: update docstring and typing
     ts = transport_simulation.TransportSimulation(**kwargs)
     ts.set_time_step(1e-3)
     return ts
@@ -92,7 +96,7 @@ def mp_handle_stats(stats_grids: dict, mydicts: list) -> None:
     simulations
 
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
-                        arrays (where each i-j pair is the result of a particular x-y pairing)
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
     :param mydicts: list of dictionaries for each i-j pair that contain the values for each species at each time point
                     frame
     :return: None
@@ -131,22 +135,21 @@ def map_param_grid_parallel(param_range: dict,
                             transport_simulation_generator_params=dict()
                             ) -> tuple:
     """
-    Run in parallel to compute simulation results over a range of parameters
+    Runs multiple simulations in parallel over a range of parameters (provided by param_range)
 
     :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding
                         to x/y-axis param names, resp., and 'range_x'/'range_y' keys
                         for numpy array for corresponding param ranges
-    :param equilibration_time_sec: equilibration time per condition in seconds
+    :param equilibration_time_sec: system equilibration time in seconds (regardless of condition)
     :param n_processors: number of processors on which to run in parallel
-    :param transport_simulation_generator a picklable (global) function that
-              generates transport_simulation objects
-    :param transport_simulation_generator_params dictionary of parameters to pass to
-              transport_simulation_generator
-    :return a dictionary from simulation properties to 2D arrays with the
-            their values at the end of simulations for each parameter
-            combination
+    :param transport_simulation_generator: a picklable (global) function that generates
+                                           transport_simulation objects
+    :param transport_simulation_generator_params: dictionary of parameters to pass to the
+                                                  transport_simulation_generator
+    :return: a tuple containing a dictionary of simulation properties with their values at the end of simulations for
+             each parameter combination (stored as a numpy array indexed y-x) and a sample transport simulation to
+             obtain some basic information (e.g. cytoplasmic and nuclear volumes)
     """
-    # TODO: update docstring and typing
     VERBOSE = True
     nx = len(param_range['range_x'])
     ny = len(param_range['range_y'])
@@ -181,7 +184,8 @@ def map_param_grid_parallel(param_range: dict,
     return stats_grids, ts
 
 
-def _get_df_for_stats_grids(param_range: dict, passive_rate, stats_grids: dict, ts) -> pd.DataFrame:
+def _get_df_for_stats_grids(param_range: dict, passive_rate, stats_grids: dict,
+                            ts: transport_simulation.TransportSimulation) -> pd.DataFrame:
     """
 
     :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding
@@ -190,11 +194,12 @@ def _get_df_for_stats_grids(param_range: dict, passive_rate, stats_grids: dict, 
     :param passive_rate: the rate of passive diffusion in transport
        simulations
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
-                        arrays (where each i-j pair is the result of a particular x-y pairing)
-    :param ts:
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
+    :param ts: an instance of TransportSimulation (to obtain cytoplasmic and nuclear volumes)
     :return:
     """
     # TODO: update docstring and typing
+    pdb.set_trace()
     X, Y = np.meshgrid(param_range['range_x'],
                        param_range['range_y'])
     df = pd.DataFrame(data={param_range['tag_x']: X.flatten(),
@@ -230,12 +235,13 @@ def get_df_from_stats_grids_by_passive(param_range: dict,
                         to x/y-axis param names, resp., and 'range_x'/'range_y' keys
                         for numpy array for corresponding param ranges
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
-                        arrays (where each i-j pair is the result of a particular x-y pairing)
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
     :param stats_grids_by_passive:
     :param ts_by_passive:
     :return:
     """
     # TODO: update docstring and typing
+    pdb.set_trace()
     dfs = [_get_df_for_stats_grids(param_range,
                                    passive,
                                    stats_grids,
@@ -289,7 +295,7 @@ def get_N_to_C_ratios(stats_grids: dict, v_N_L: float, v_C_L: float) -> np.ndarr
     Computes the cargo nuclear-to-cytoplasmic ratios (normalized by area volumes) for the simulation of each x-y pairing
 
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
-                        arrays (where each i-j pair is the result of a particular x-y pairing)
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
     :param v_N_L: volume (in liters) of the nucleus
     :param v_C_L: volume (in liters) of the cytoplasm
     :return: numpy array with the N/C ratios where each i-j pairing is the same as in stats_grids
@@ -305,7 +311,7 @@ def get_N_to_C_ratios_for_ts(stats_grids: dict, ts: transport_simulation.Transpo
     Computes the cargo nuclear-to-cytoplasmic ratios (normalized by area volumes) for the simulation of each x-y pairing
 
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
-                        arrays (where each i-j pair is the result of a particular x-y pairing)
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
     :param ts: transport simulation instance used to obtain nuclear and cytoplasmic volumes
     :return: numpy array with the N/C ratios where each i-j pairing is the same as in stats_grids
     """
@@ -324,15 +330,14 @@ def plot_NC_ratios(param_range: dict, stats_grids: dict, ts: transport_simulatio
                         to x/y-axis param names, resp., and 'range_x'/'range_y' keys
                         for numpy array for corresponding param ranges
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
-                        arrays (where each i-j pair is the result of a particular x-y pairing)
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
     :param ts: transport simulation instance used to obtain nuclear and cytoplasmic volumes
     :param vmin: min value for the contour plot color range
     :param vmax: max value for the contour plot color range
-    :param locator:
-    :param levels:
+    :param locator: used to determine levels for the contour plot in case levels are not given
+    :param levels: determines values for the contour lines and regions (must be in increasing order)
     :return: None
     """
-    # TODO: update docstring and typing
     NC_ratios = get_N_to_C_ratios_for_ts(stats_grids, ts)
     print(vmin, vmax)
     plot_param_grid(param_range,
@@ -345,7 +350,8 @@ def plot_NC_ratios(param_range: dict, stats_grids: dict, ts: transport_simulatio
                     extend='both')
 
 
-def plot_bound_fraction(param_range: dict, stats_grids: dict, compartment: str, ax: matplotlib.axes.Axes = None) -> None:
+def plot_bound_fraction(param_range: dict, stats_grids: dict, compartment: str,
+                        ax: matplotlib.axes.Axes = None) -> None:
     """
     Computes the fraction of complexed labeled cargo in a particular area for the simulation of each x-y pairing
 
@@ -353,12 +359,11 @@ def plot_bound_fraction(param_range: dict, stats_grids: dict, compartment: str, 
                         to x/y-axis param names, resp., and 'range_x'/'range_y' keys
                         for numpy array for corresponding param ranges
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
-                        arrays (where each i-j pair is the result of a particular x-y pairing)
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
     :param compartment: area for which to calculate the bound fraction (nucleus or cytoplasm)
-    :param ax: Set the
+    :param ax: The axes to be set for the contour plot
     :return: None
     """
-    # TODO: update docstring and typing
     assert (compartment in ['N', 'C'])
     tag_complex = f"complexL_{compartment}"
     tag_free = f"freeL_{compartment}"
@@ -382,7 +387,7 @@ def get_import_export_ratios(stats_grids: dict) -> np.ndarray:
     Calculates the cargo nuclear-import-to-nuclear-export ratios for the simulation of each x-y pairing
 
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
-                        arrays (where each i-j pair is the result of a particular x-y pairing)
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
     :return: numpy array with the import/export ratios where each i-j pairing is the same as in stats_grids
     """
     import_rate = stats_grids["nuclear_importL_per_sec"] + stats_grids["nuclear_importU_per_sec"]
@@ -391,7 +396,7 @@ def get_import_export_ratios(stats_grids: dict) -> np.ndarray:
     return ratios
 
 
-def plot_import_export(param_range: dict, stats_grids: dict, axes=None,
+def plot_import_export(param_range: dict, stats_grids: dict, axes: list = None,
                        **contourf_kwargs) -> None:
     """
 
@@ -399,11 +404,11 @@ def plot_import_export(param_range: dict, stats_grids: dict, axes=None,
                         to x/y-axis param names, resp., and 'range_x'/'range_y' keys
                         for numpy array for corresponding param ranges
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
-                        arrays (where each i-j pair is the result of a particular x-y pairing)
-    :param axes:
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
+    :param axes: axes to use for the different contour plots
+    :param contourf_kwargs: kwargs that will be passed to the matplotlib contourf function
     :return: None
     """
-    # TODO: update docstring and typing
     if axes is None:
         fig, axes = subplot(2, 1)
     for tag, ax in zip(['import', 'export'], axes):
