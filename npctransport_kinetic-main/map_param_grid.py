@@ -171,6 +171,7 @@ def map_param_grid_parallel(param_range: dict,
 #                                 transport_simulation_generator,
 #                                 transport_simulation_generator_params,
 #                                 rngs[j * nx + i]))
+            print(f"######## Loop start ny(j)={j}, nx(i)={i}")
             results = mp_do_simulation(param_range.copy(),
                 i, j,
                 equilibration_time_sec,
@@ -179,9 +180,10 @@ def map_param_grid_parallel(param_range: dict,
                 rngs[j * nx + i])
     
             mp_handle_stats(stats_grids, [results])
+            print(f"######## Loop end ny(j)={j}, nx(i)={i}")
         
 #     print("njobs={}".format(len(jobs_params)))
-    prtin('where njobs was')
+    print('where njobs was')
     callback_function = lambda mydict: mp_handle_stats(stats_grids, mydict)
 #     pool = multiprocessing.Pool(processes=n_processors)
 #     results = pool.starmap_async(mp_do_simulation,
