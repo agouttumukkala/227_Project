@@ -305,22 +305,22 @@ class TransportSimulation:
         Sets the parameter for maximum passive rate of nuclear diffusion such that the passive component of
         d[N]/dt is rate_per_sec*([C]-[N])
 
-        :param rate_per_sec: the max rate of passive diffusion in number of molecules/(second*M)
+        :param rate_per_sec: the max rate of passive diffusion in 1/(second*M)
         :return: None
         """
         self.max_passive_diffusion_rate_nmol_per_sec_per_M = \
-            rate_per_sec * N_A * self.v_N_L  # convert per_M to per_nmol (so cancels nmol)
+            rate_per_sec * N_A * self.v_N_L  # convert per_M to per_nmol
 
     def set_passive_cytoplasmic_molar_rate_per_sec(self, rate_per_sec: float) -> None:
         """
         Sets the parameter for maximum passive rate of cytoplasmic diffusion such that the passive component of
         d[C]/dt is rate_per_sec*([C]-[N])
 
-        :param rate_per_sec: the max rate of passive diffusion in number of molecules/(second*M)
+        :param rate_per_sec: the max rate of passive diffusion in 1/(second*M)
         :return: None
         """
         self.max_passive_diffusion_rate_nmol_per_sec_per_M = \
-            rate_per_sec * N_A * self.v_C_L  # convert per_M to per_nmol (so cancels nmol)
+            rate_per_sec * N_A * self.v_C_L  # convert per_M to per_nmol
 
     def set_params(self, **kwargs) -> None:
         """

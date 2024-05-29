@@ -92,14 +92,15 @@ def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
                                         v_C_L: float = 2194e-15,
                                         **kwargs) -> transport_simulation.TransportSimulation:
     """
+    Generates a transport simulation of passive cargo transport
 
-    :param passive_nuclear_molar_rate_per_sec:
+    :param passive_nuclear_molar_rate_per_sec: rate of diffusion (passive transport) of cargo across the nuclear
+                                               envelope (in 1/(second*M))
     :param Ran_cell_M: total Ran concentration in the nucleus and cytoplasm combined (in M)
     :param v_N_L: nucleus volume in liters
     :param v_C_L: cytoplasm volume in liters
-    :return:
+    :return: resulting transport simulation for the parameter values and arguments given
     """
-    # TODO: update docstring and typing
     ts = transport_simulation.TransportSimulation(v_N_L=v_N_L,
                                                   v_C_L=v_C_L)
     ts.set_time_step(0.1e-3)
@@ -130,21 +131,25 @@ def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
     return ts
 
 
-def plot_stats_grids(stats_grids, transport_simulation, param_range,
-                     NC_min=1.0,
-                     NC_max=20.0,
-                     vmax_import_export=10.0) -> None:
+def plot_stats_grids(stats_grids: dict, transport_simulation: transport_simulation.TransportSimulation,
+                     param_range: dict,
+                     NC_min: float = 1.0,
+                     NC_max: float = 20.0,
+                     vmax_import_export: float = 10.0) -> None:
     """
+    Creates different contour plots (e.g. N/C ratio, bound fraction for nucleus and cytoplasm,
+    nuclear import and export rate plots, and import/export ratio plots) given a data dictionary
 
-    :param stats_grids:
-    :param transport_simulation:
-    :param param_range:
-    :param NC_min:
-    :param NC_max:
-    :param vmax_import_export:
+    :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
+    :param transport_simulation: transport simulation instance used to obtain nuclear and cytoplasmic volumes
+    :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding to x/y-axis param names, resp., and
+                        'range_x'/'range_y' keys for numpy array for corresponding param ranges
+    :param NC_min: min value for the N/C ratio axis
+    :param NC_max: max value for the N/C ratio axis
+    :param vmax_import_export: max value for the nuclear import and export rate plots
     :return: None
     """
-    # TODO: update docstring and typing
     fig, axes = plt.subplots(3, 3, figsize=(14, 10), sharex=True, sharey=True)
     # N/C
     plt.sca(axes[0, 0])
@@ -162,7 +167,7 @@ def plot_stats_grids(stats_grids, transport_simulation, param_range,
                                        'N', ax=axes[0, 1])
     map_param_grid.plot_bound_fraction(param_range, stats_grids,
                                        'C', ax=axes[0, 2])
-    # Import/export
+    # Nuclear import/export rates
     import_export_locator = mpl.ticker.LogLocator(subs=[1.0, 5.0])
     map_param_grid.plot_import_export(param_range,
                                       stats_grids,
@@ -173,6 +178,7 @@ def plot_stats_grids(stats_grids, transport_simulation, param_range,
                                       levels=np.logspace(np.log10(1e-2), np.log10(vmax_import_export), 21),
                                       locator=import_export_locator,
                                       extend='both')
+    # import/export ratio
     plt.sca(axes[1, 2])
     ratios_import_export = map_param_grid.get_import_export_ratios(stats_grids)
     map_param_grid.plot_param_grid(param_range,
@@ -185,7 +191,7 @@ def plot_stats_grids(stats_grids, transport_simulation, param_range,
                                    locator=mpl.ticker.LogLocator(base=2.0),
                                    extend='both'
                                    )
-
+    # nuclear GTP: cytoplasmic GTP
     plt.sca(axes[2, 0])
     GTP_ratio = stats_grids['GTP_N'] / stats_grids['GTP_C']
     map_param_grid.plot_param_grid(param_range,
@@ -195,6 +201,7 @@ def plot_stats_grids(stats_grids, transport_simulation, param_range,
                                    vmax=2000.0,
                                    levels=np.linspace(0, 2000, 21),
                                    extend='both')
+    # cytoplasmic GDP: nuclear GDP
     plt.sca(axes[2, 1])
     GDP_ratio = stats_grids['GDP_C'] / stats_grids['GDP_N']
     map_param_grid.plot_param_grid(param_range,
@@ -204,6 +211,7 @@ def plot_stats_grids(stats_grids, transport_simulation, param_range,
                                    #                     vmax=vmax,
                                    #                     levels=np.linspace(0,vmax,11),
                                    extend='both')
+    # nuclear Ran: cytoplasmic Ran
     plt.sca(axes[2, 2])
     Ran_ratio = (stats_grids['GTP_N'] + stats_grids['GDP_N']) / (stats_grids['GTP_C'] + stats_grids['GDP_C'])
     map_param_grid.plot_param_grid(param_range,
@@ -218,13 +226,13 @@ def plot_stats_grids(stats_grids, transport_simulation, param_range,
 def transport_simulation_generator(passive: float, Ran_cell_M: float, c_M: float,
                                    **kwargs) -> transport_simulation.TransportSimulation:
     """
+    Function that creates a transport simulation
 
-    :param passive:
-    :param Ran_cell_M:
-    :param c_M:
-    :return:
+    :param passive: rate of diffusion (passive transport) of cargo across the nuclear envelope (in 1/(second*M))
+    :param Ran_cell_M: total Ran concentration in the nucleus and cytoplasm combined (in M)
+    :param c_M: initial concentration of cargo in cell cytoplasm (in M)
+    :return: resulting transport simulation based on values and arguments given
     """
-    # TODO: update docstring and typing
     print(f"Ran: {Ran_cell_M:.6f} M")
     return get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec=passive,
                                                Ran_cell_M=Ran_cell_M,
@@ -232,8 +240,8 @@ def transport_simulation_generator(passive: float, Ran_cell_M: float, c_M: float
                                                **kwargs)
 
 
-def get_stats_on_grid(output,
-                      passive_range,
+def get_stats_on_grid(output: str,
+                      passive_range: tuple,
                       npc_traverse_range: tuple,
                       k_on_range: tuple,
                       nx: int = 20,
@@ -244,26 +252,26 @@ def get_stats_on_grid(output,
                       v_N_L: float = 627e-15,
                       v_C_L: float = 2194e-15,
                       equilibration_time_sec: float = 100.0,
-                      pickle_file=None
+                      pickle_file: str = None
                       ) -> None:
     """
 
-    :param output:
-    :param passive_range:
+    :param output: an identifier for this set of simulations (used to name the png file of graphs)
+    :param passive_range: tuple of the min and max values for the cargo passive transport (diffusion) rate range
     :param npc_traverse_range: tuple of the min and max values for the NPC traverse rate range
     :param k_on_range: tuple of the min and max values for the free-to-complex rate range
     :param nx: number of values used to discretize npc_traverse_range
     :param ny: number of values used to discretize k_on_range
     :param n_passive:
-    :param cargo_concentration_M:
-    :param Ran_concentration_M:
-    :param v_N_L:
-    :param v_C_L:
-    :param equilibration_time_sec: equilibration time in seconds
-    :param pickle_file:
+    :param cargo_concentration_M: initial concentration of cargo in cell cytoplasm (in M)
+    :param Ran_concentration_M: total Ran concentration in the nucleus and cytoplasm combined (in M)
+    :param v_N_L: nucleus volume in liters
+    :param v_C_L: cytoplasm volume in liters
+    :param equilibration_time_sec: total simulation time (equilibrium time of the system) in seconds
+    :param pickle_file: file path for the pickle file information on the simulation results, the simulation objects, and
+                        the x-y space of NPC traverse rates and free-to-complex rates (if no file desired, pass in None)
     :return: None
     """
-    # TODO: update docstring and typing
     param_range = get_param_range_traverse_kon(nx, ny,
                                                npc_traverse_range,
                                                k_on_range)

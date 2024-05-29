@@ -330,9 +330,8 @@ def plot_NC_ratios(param_range: dict, stats_grids: dict, ts: transport_simulatio
     """
     Creates a contour plot with N/C ratios as the z-values
 
-    :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding
-                        to x/y-axis param names, resp., and 'range_x'/'range_y' keys
-                        for numpy array for corresponding param ranges
+    :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding to x/y-axis param names, resp., and
+                        'range_x'/'range_y' keys for numpy array for corresponding param ranges
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
                         arrays (where each j-i pair is the result of a particular y-x pairing)
     :param ts: transport simulation instance used to obtain nuclear and cytoplasmic volumes
@@ -358,6 +357,7 @@ def plot_bound_fraction(param_range: dict, stats_grids: dict, compartment: str,
                         ax: matplotlib.axes.Axes = None) -> None:
     """
     Computes the fraction of complexed labeled cargo in a particular area for the simulation of each x-y pairing
+    and creates a contour plot
 
     :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding
                         to x/y-axis param names, resp., and 'range_x'/'range_y' keys
@@ -403,6 +403,7 @@ def get_import_export_ratios(stats_grids: dict) -> np.ndarray:
 def plot_import_export(param_range: dict, stats_grids: dict, axes: list = None,
                        **contourf_kwargs) -> None:
     """
+    Creates contour plots of the import and export rates of labeled cargo in and out of the nucleus
 
     :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding
                         to x/y-axis param names, resp., and 'range_x'/'range_y' keys
