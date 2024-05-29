@@ -1,6 +1,6 @@
 import pdb
 import sys
-import multiprocessing
+import multiprocess
 import transport_simulation
 from transport_simulation import TransportSimulation
 from make_plots import make_plot
@@ -100,7 +100,7 @@ def get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors=None,
                                is_change_cell_volume=False):
     assert (MW in [27, 34, 41, 47, 54, 67])
     if n_processors is None:
-        n_processors = multiprocessing.cpu_count()
+        n_processors = os.cpu_count()
         print(f"Using {n_processors} processors")
 
     stats_list_by_force = {}
@@ -113,7 +113,7 @@ def get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors=None,
                                         is_force=is_force,
                                         is_change_cell_volume=is_change_cell_volume)
             TS_tuples.append((ts, simulation_time_sec))
-        pool = multiprocessing.Pool(processes=n_processors)
+        pool = multiprocess.Pool(processes=n_processors)
         stats_list_by_force[is_force] = pool.starmap(do_simulate,
                                                      TS_tuples)
         TSs_by_force[is_force] = [x[0] for x in TS_tuples]

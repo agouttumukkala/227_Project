@@ -14,7 +14,7 @@
 # ---
 
 # %%
-import multiprocessing
+import multiprocess
 import pdb
 import matplotlib.axes
 import numpy as np
@@ -87,6 +87,7 @@ def mp_do_simulation(param_range: dict, i: int, j: int,
     r = rng.random()
     if r < 0.1:
         print(f"Finished some ten jobs (at i={i} j={j} r={r})")
+    print("\nFinished simulation for combo: i-{}, j-{}\n".format(i, j))
     return {"i": i, "j": j, "stats": stats}
 
 
@@ -125,7 +126,9 @@ def mp_handle_error(error: Exception) -> None:
     :param error: the error that needs to be printed
     :return: None
     """
+    import traceback
     print("Error", error)
+    print("Traceback: \n", traceback.format_exc())
 
 
 def map_param_grid_parallel(param_range: dict,
@@ -165,33 +168,23 @@ def map_param_grid_parallel(param_range: dict,
     rngs = [np.random.default_rng(s) for s in seeds]
     for j in range(ny):
         for i in range(nx):
-#             jobs_params.append((param_range.copy(),
-#                                 i, j,
-#                                 equilibration_time_sec,
-#                                 transport_simulation_generator,
-#                                 transport_simulation_generator_params,
-#                                 rngs[j * nx + i]))
-            results = mp_do_simulation(param_range.copy(),
-                i, j,
-                equilibration_time_sec,
-                transport_simulation_generator,
-                transport_simulation_generator_params,
-                rngs[j * nx + i])
-    
-            mp_handle_stats(stats_grids, [results])
-        
-#     print("njobs={}".format(len(jobs_params)))
-    prtin('where njobs was')
-    callback_function = lambda mydict: mp_handle_stats(stats_grids, mydict)
-#     pool = multiprocessing.Pool(processes=n_processors)
-#     results = pool.starmap_async(mp_do_simulation,
-#                                  jobs_params,
-#                                  callback=callback_function,
-#                                  error_callback=mp_handle_error)
+            jobs_params.append((param_range.copy(),
+                                i, j,
+                                equilibration_time_sec,
+                                transport_simulation_generator,
+                                transport_simulation_generator_params,
+                                rngs[j * nx + i]))
 
-#     results.wait()
-#     pool.close()
-#     pool.join()
+    print("njobs={}".format(len(jobs_params)))
+    callback_function = lambda mydict: mp_handle_stats(stats_grids, mydict)
+    pool = multiprocess.Pool(processes=n_processors)
+    results = pool.starmap_async(mp_do_simulation,
+                                 jobs_params,
+                                 callback=callback_function,
+                                 error_callback=mp_handle_error)
+    results.wait()
+    pool.close()
+    pool.join()
     return stats_grids, ts
 
 

@@ -1,4 +1,3 @@
-import multiprocessing
 import os
 
 import numpy as np
@@ -201,7 +200,7 @@ def plot_stats_grids(stats_grids, transport_simulation, param_range,
     map_param_grid.plot_param_grid(param_range,
                                    GDP_ratio,
                                    Z_label=f"GDP C:N",
-                                   vmin=0.0,
+                                   #                     vmin=0.0,
                                    #                     vmax=vmax,
                                    #                     levels=np.linspace(0,vmax,11),
                                    extend='both')
@@ -268,7 +267,7 @@ def get_stats_on_grid(output,
     param_range = get_param_range_traverse_kon(nx, ny,
                                                npc_traverse_range,
                                                k_on_range)
-    n_processors = multiprocessing.cpu_count()
+    n_processors = os.cpu_count()
     stats_grids_traverse_by_passive_force = {}  # 2D maps of statistics for different passive diffusion params
     ts_traverse_by_passive_force = {}  # transport simulation object used for each
     print("*** Starting multiprocess run ***")
