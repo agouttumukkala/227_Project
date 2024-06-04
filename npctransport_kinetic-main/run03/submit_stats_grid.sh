@@ -6,15 +6,11 @@
 
 # #SBATCH --nodes=32
 
-source /cs/staff/ravehb/raveh_lab/External/py3/bin/activate
-if [ -z ${SLURM_CPUS_PER_TASK+x} ] ; then
-    SLURM_CPUS_PER_TASK=1
-fi
-echo CPUs per task ${SLURM_CPUS_PER_TASK}
+
 python - << EOF
-import subprocess
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import stats_grid
-import os
 
 stats_grid.get_stats_on_grid(
     output="run03",
@@ -26,6 +22,5 @@ stats_grid.get_stats_on_grid(
     n_passive=22,
     cargo_concentration_M=0.1e-6,
     Ran_concentration_M=20e-6,
-    pickle_file="run03.pkl",
-    number_of_processors=${SLURM_CPUS_PER_TASK})
+    pickle_file="run03.pkl")
 EOF

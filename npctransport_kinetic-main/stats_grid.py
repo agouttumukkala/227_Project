@@ -172,10 +172,10 @@ def plot_stats_grids(stats_grids: dict, transport_simulation: transport_simulati
     map_param_grid.plot_import_export(param_range,
                                       stats_grids,
                                       axes=[axes[1, 0], axes[1, 1]],
-                                      vmin=0.01,
-                                      vmax=vmax_import_export,
-                                      #                    levels=np.linspace(0.0,vmax_import_export,20),
-                                      levels=np.logspace(np.log10(1e-2), np.log10(vmax_import_export), 21),
+                                      # vmin=0.01,
+                                      # vmax=vmax_import_export,
+                                      # #                    levels=np.linspace(0.0,vmax_import_export,20),
+                                      # levels=np.logspace(np.log10(1e-2), np.log10(vmax_import_export), 21),
                                       locator=import_export_locator,
                                       extend='both')
     # import/export ratio
@@ -184,10 +184,10 @@ def plot_stats_grids(stats_grids: dict, transport_simulation: transport_simulati
     map_param_grid.plot_param_grid(param_range,
                                    ratios_import_export,
                                    Z_label='import:export',
-                                   vmin=NC_min,
-                                   vmax=NC_max,
-                                   #                   levels= np.linspace(NC_min, NC_max, 21)
-                                   levels=np.logspace(np.log2(NC_min), np.log2(NC_max), 21, base=2.0),
+                                   # vmin=NC_min,
+                                   # vmax=NC_max,
+                                   # #                   levels= np.linspace(NC_min, NC_max, 21)
+                                   # levels=np.logspace(np.log2(NC_min), np.log2(NC_max), 21, base=2.0),
                                    locator=mpl.ticker.LogLocator(base=2.0),
                                    extend='both'
                                    )
@@ -197,9 +197,9 @@ def plot_stats_grids(stats_grids: dict, transport_simulation: transport_simulati
     map_param_grid.plot_param_grid(param_range,
                                    GTP_ratio,
                                    Z_label="GTP N:C",
-                                   vmin=0.0,
-                                   vmax=2000.0,
-                                   levels=np.linspace(0, 2000, 21),
+                                   # vmin=0.0,
+                                   # vmax=2000.0,
+                                   # levels=np.linspace(0, 2000, 21),
                                    extend='both')
     # cytoplasmic GDP: nuclear GDP
     plt.sca(axes[2, 1])
@@ -217,9 +217,9 @@ def plot_stats_grids(stats_grids: dict, transport_simulation: transport_simulati
     map_param_grid.plot_param_grid(param_range,
                                    Ran_ratio,
                                    Z_label=f"Ran N:C",
-                                   vmin=0.0,
-                                   vmax=20,
-                                   levels=np.linspace(0, 20, 21),
+                                   # vmin=0.0,
+                                   # vmax=20,
+                                   # levels=np.linspace(0, 20, 21),
                                    extend='both')
 
 
@@ -279,7 +279,10 @@ def get_stats_on_grid(output: str,
     stats_grids_traverse_by_passive_force = {}  # 2D maps of statistics for different passive diffusion params
     ts_traverse_by_passive_force = {}  # transport simulation object used for each
     print("*** Starting multiprocess run ***")
-    for passive in np.logspace(*np.log10(passive_range), n_passive):  # 0.01,0.09,6):
+    from tqdm.auto import tqdm
+    passive_space = np.logspace(*np.log10(passive_range), n_passive)
+    for i in tqdm(range(len(passive_space))):
+        passive = passive_space[i]
         key = passive
         if key in stats_grids_traverse_by_passive_force:
             continue

@@ -77,6 +77,7 @@ def mp_do_simulation(param_range: dict, i: int, j: int,
     :param rng: a random number generator
     :return: dictionary with results from the simulation, as well as the i and j indexes for the simulation
     """
+    print("\nStarting simulation for combo: i-{}, j-{}\n".format(i, j))
     nskip_statistics = 100
     my_ts = tsg(**tsg_params)
     cur_params = {param_range['tag_x']: param_range['range_x'][i],
@@ -272,26 +273,32 @@ def plot_param_grid(param_range: dict,
     :param contourf_kwargs: kwargs that will be passed to the matplotlib contourf function
     :return: None
     """
-    x_meshgrid, y_meshgrid = np.meshgrid(param_range["range_x"],
-                                         param_range["range_y"])
-    plt.contourf(x_meshgrid,
-                 y_meshgrid,
-                 Z,
-                 **contourf_kwargs)
-    #    print("contourf params", contourf_kwargs)
-    ax = plt.gca()
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.set_xlabel(param_range['pretty_x'])
-    ax.set_ylabel(param_range['pretty_y'])
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    if xlim[1] > xlim[0]:
-        ax.set_xlim(xlim[1], xlim[0])
-    cb = plt.colorbar(label=Z_label)
-    ticks = cb.get_ticks()
-    cb.set_ticks(ticks)
-    cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    try:
+        x_meshgrid, y_meshgrid = np.meshgrid(param_range["range_x"],
+                                             param_range["range_y"])
+        plt.contourf(x_meshgrid,
+                     y_meshgrid,
+                     Z,
+                     **contourf_kwargs)
+        #    print("contourf params", contourf_kwargs)
+        ax = plt.gca()
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_xlabel(param_range['pretty_x'])
+        ax.set_ylabel(param_range['pretty_y'])
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        if xlim[1] > xlim[0]:
+            ax.set_xlim(xlim[1], xlim[0])
+        cb = plt.colorbar(label=Z_label)
+        ticks = cb.get_ticks()
+        cb.set_ticks(ticks)
+        cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    except ValueError as e:
+        if str(e) == "upper_level must be larger than lower_level":
+            print("\nUpper level/lower level error:\n"+ str(e) + '\n')
+        else:
+            raise e
 
 
 def get_N_to_C_ratios(stats_grids: dict, v_N_L: float, v_C_L: float) -> np.ndarray:

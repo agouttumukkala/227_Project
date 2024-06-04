@@ -2,7 +2,7 @@ import numpy as np
 import re
 
 N_A = 6.022e+23  # Avogadro's number
-VERBOSE = True
+VERBOSE = False
 CHECKS = False
 
 
