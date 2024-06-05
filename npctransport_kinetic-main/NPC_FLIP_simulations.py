@@ -14,20 +14,33 @@ from matplotlib import ticker
 import copy
 import importlib
 import stats_grid
+import time
 
 
-def plot_simulation_attributes(stats,
-                               attributes_list,
-                               log=True):
+def create_plot(plot, plot_data: list, xlabel=None, ylabel=None, set_lsandfs: bool = False):
+    line_colors = ['bo', 'ro']
+    for i in range(len(plot_data)):
+        line = plot_data[i]
+        plot.plots(line['x_data'], line['y_data'], line_colors[i], label=line['label'], markersize=4)
+    ylabel is not None and plot.set_ylabel(ylabel)
+    xlabel is not None and plot.set_xlabel(xlabel)
+    if len(plot_data) > 1:
+        plot.legend(frameon=True)
+    if set_lsandfs:
+        positions = [0.5, 1.0, 2.0, 4.0]
+        plot.yaxis.set_major_locator(ticker.FixedLocator(positions))
+        plot.yaxis.set_major_formatter(ticker.FixedFormatter(positions))
+        plot.yaxis.set_minor_locator(ticker.FixedLocator([]))
+        plot.yaxis.set_minor_formatter(ticker.FixedFormatter([]))
+
+
+def plot_simulation_attributes(stats, attributes_list, log=True):
     def merge_lists(lists):
         return [x for y in lists for x in y]
 
     attributes = merge_lists(attributes_list)
     assert (len(attributes) == sum([len(x) for x in attributes_list]))
-    fig, axes = plt.subplots(len(attributes_list),
-                             1,
-                             figsize=(10, 15),
-                             squeeze=False)
+    fig, axes = plt.subplots(len(attributes_list), 1, figsize=(10, 15), squeeze=False)
     x = stats['time_sec']
     for cur_attributes, ax in zip(attributes_list, axes[:, 0]):
         print(cur_attributes)
@@ -46,20 +59,17 @@ def plot_simulation_attributes(stats,
 
 
 def get_ts_time_series(dt_sec, **kwargs):
-    ts = TransportSimulation(v_N_L=627e-15,
-                             v_C_L=2194e-15,
-                             **kwargs)
+    ts = TransportSimulation(v_N_L=627e-15, v_C_L=2194e-15, **kwargs)
     ts.bleach_start_time_sec = 400.0
-    ts.dt_sec = dt_sec
-    ts.set_NPC_dock_sites(n_NPCs=2000,
-                          n_dock_sites_per_NPC=500)
+    ts.set_time_step(dt_sec)
+    ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
     ts.set_passive_nuclear_molar_rate_per_sec(0.02)
-    ts.set_params(fraction_complex_NPC_traverse_per_sec=100,
-                  rate_free_to_complex_per_sec=0.05)
+    ts.set_params(fraction_complex_NPC_traverse_per_sec=100, rate_free_to_complex_per_sec=0.05)
     ts.bleach_volume_L_per_sec = 100.0e-15
     #ts.rate_complex_to_NPC_per_free_site_per_sec_per_M= 1.0e+6
     ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 0.05e+6  # TODO: this is doubled relative to complex_N to free_N
     ts.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 0.05e+6
+
     return ts
 
 
@@ -137,7 +147,7 @@ def get_param_range_D_kon(nx, ny):
     v_N_L = 627e-15
     param_range['tag_x'] = "max_passive_diffusion_rate_nmol_per_sec_per_M"
     param_range['range_x'] = np.logspace(-4, 0,
-                                         nx) * transport_simulation.N_A * v_N_L  # divided to convert from nuclear passive diffudsion rate r, where dN/dt = r*([C]-[N]))
+                                         nx) * transport_simulation.N_A * v_N_L  # divided to convert from nuclear passive diffusion rate r, where dN/dt = r*([C]-[N]))
     param_range['pretty_x'] = r"passive diffusion rate [$s^{-1} M^{-1}$]"
     param_range['tag_y'] = "rate_free_to_complex_per_sec"
     param_range['range_y'] = np.logspace(-4, 0, ny)
@@ -201,13 +211,8 @@ def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
     return ts
 
 
-def plot_stats_grids(stats_grids, transport_simulation,
-                     NC_min=1.0,
-                     NC_max=20.0,
-                     vmax_import_export=10.0):
-
+def plot_stats_grids(stats_grids, transport_simulation, NC_min=1.0, NC_max=20.0, vmax_import_export=10.0):
     stats_grid.plot_stats_grids(stats_grids, transport_simulation, param_range, NC_min, NC_max, vmax_import_export)
-    plt.show()
 
 
 def get_passive_nuclear_molar_rate_per_sec(MW,
@@ -235,15 +240,10 @@ def get_force_effect_on_diffusion(MW):
 
 
 def my_plot_param_grid(df,  # a pivoted 2D dataframe
-                       pretty_x=None,
-                       pretty_y=None,
-                       pretty_z=None,
-                       is_colorbar=False,
-                       **contourf_kwargs):
+                       pretty_x=None, pretty_y=None, pretty_z=None, is_colorbar=False, **contourf_kwargs):
     X, Y = np.meshgrid(df.columns, df.index)
     ax = plt.gca()
-    ctr = plt.contourf(X, Y, df.to_numpy(),
-                       **contourf_kwargs)
+    ctr = plt.contourf(X, Y, df.to_numpy(), **contourf_kwargs)
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_xlabel(pretty_x)
@@ -266,13 +266,13 @@ def transform_N2C_to_N_relative(N2C, N2C_vol):
 
 
 def plot_dX_dY_Z(df, is_transform=False, N2C_vol=0.333):
-    NLSs = df['rate_free_to_complex_per_sec'].unique()[8:24]
+    NLSs = df['rate_free_to_complex_per_sec'].unique()
+    NLS_starti = len(NLSs) // 4
+    NLS_endi = len(NLSs) // 4 * 3
+    NLSs = NLSs[NLS_starti:NLS_endi]
     nrow = len(NLSs)
     ncol = 3 if is_transform else 4
-    fig, axes = plt.subplots(nrow, ncol,
-                             sharex=True,
-                             sharey=False,
-                             squeeze=False,
+    fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=False, squeeze=False,
                              figsize=(4.5 * ncol + 1.0, 3.2 * nrow + 1.0))
     if is_transform:
         zlabel_by_column = {0: r"dN / dX",
@@ -287,9 +287,7 @@ def plot_dX_dY_Z(df, is_transform=False, N2C_vol=0.333):
 
     for axes, NLS in zip(axes, NLSs):
         is_NLS = np.isclose(df['rate_free_to_complex_per_sec'], NLS)
-        N2C = df[is_NLS].pivot(index='passive_rate',
-                               columns='fraction_complex_NPC_traverse_per_sec',
-                               values='N2C')
+        N2C = df[is_NLS].pivot(index='passive_rate', columns='fraction_complex_NPC_traverse_per_sec', values='N2C')
         N_relative = (N2C * N2C_vol) / (1 + N2C * N2C_vol)
         for column, ax in enumerate(axes):
             if column in [0, 1]:
@@ -297,17 +295,13 @@ def plot_dX_dY_Z(df, is_transform=False, N2C_vol=0.333):
                 if is_transform:
                     is_linear = True
                     Z_diff = np.diff(N_relative.values, axis=(1 - column), append=0)
-                    Z = pd.DataFrame(Z_diff,
-                                     index=N_relative.index,
-                                     columns=N_relative.columns)
+                    Z = pd.DataFrame(Z_diff, index=N_relative.index, columns=N_relative.columns)
                     NC_min = 0.0
                     NC_max = 0.05 if column == 0 else 0.01
                 else:
                     is_linear = False
                     Z_diff = np.diff(N2C.values, axis=(1 - column), append=0)
-                    Z = pd.DataFrame(np.abs(Z_diff) / N2C.values,
-                                     index=N2C.index,
-                                     columns=N2C.columns)
+                    Z = pd.DataFrame(np.abs(Z_diff) / N2C.values, index=N2C.index, columns=N2C.columns)
                     NC_min = 0.01
                     NC_max = 0.4
             else:
@@ -353,7 +347,6 @@ def plot_dX_dY_Z(df, is_transform=False, N2C_vol=0.333):
             ax.set_ylim(ylim)
             plt.title(f"NLS $k_{{on}}$={NLS * 1000:.1f} $ms^{{-1}}$")
     plt.tight_layout()
-    plt.show()
 
 
 def plot_cells(
@@ -367,18 +360,12 @@ def plot_cells(
     cells = df[cells_column].unique()[:2]
     ncol = 3
     nrow = len(traverses) // ncol + (len(traverses) % ncol > 0) * 1
-    fig, axes = plt.subplots(nrow, ncol,
-                             sharex=True,
-                             sharey=True,
-                             squeeze=False,
-                             figsize=(17.0, 4.0 * nrow + 1.0))
+    fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=True, squeeze=False, figsize=(17.0, 4.0 * nrow + 1.0))
     axes_iter = iter(axes.reshape(-1))
     for cell in cells:
         ax = next(axes_iter)
         is_cell = np.isclose(df[cells_column], cell)
-        N2C = df[is_cell].pivot(index=y_column,
-                                columns=x_column,
-                                values='N2C')
+        N2C = df[is_cell].pivot(index=y_column, columns=x_column, values='N2C')
         NC_min = 1.0
         NC_max = 10.0
         plt.sca(ax)
@@ -392,7 +379,7 @@ def plot_cells(
                                 locator=mpl.ticker.LogLocator(base=2.0),
                                 extend='both')
         colors = ['r', 'g', 'b', 'k']
-        if (x_column == "passive_rate"):
+        if x_column == "passive_rate":
             xlim = ax.get_xlim()
             for MW, color in zip(MWs, colors):
                 x0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
@@ -404,7 +391,7 @@ def plot_cells(
                 plt.annotate(str(MW), (x0, y0), color=color)
                 ax.plot((x1, x1), (y0, y1), color + "-", linewidth=3.0)
             ax.set_xlim(xlim)
-        if (y_column == "passive_rate"):
+        if y_column == "passive_rate":
             pass
         plt.title(pretty_cell.format(cell))
     fig.subplots_adjust(right=0.8)
@@ -413,45 +400,29 @@ def plot_cells(
     ticks = cb.get_ticks()
     cb.set_ticks(ticks)
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
-    plt.show()
 
 
 def get_dLogRatios_by_passive(stats_grids_by_passive, ts_by_passive):
     dRatios_by_passive = {}
     keys = sorted(stats_grids_by_passive.keys())
     for key0, key1 in zip(keys[:-1], keys[1:]):
-        stats_grids = [stats_grids_by_passive[key0],
-                       stats_grids_by_passive[key1]]
-        ts = [ts_by_passive[key0],
-              ts_by_passive[key1]]
+        stats_grids = [stats_grids_by_passive[key0], stats_grids_by_passive[key1]]
+        ts = [ts_by_passive[key0], ts_by_passive[key1]]
         v_N_L = ts[0].get_v_N_L()
         v_C_L = ts[0].get_v_C_L()
-        assert (v_N_L == ts[1].get_v_N_L())
-        assert (v_C_L == ts[1].get_v_C_L())
-        ratios0 = map_param_grid.get_N_to_C_ratios(stats_grids[0],
-                                                   v_N_L, v_C_L)
-        ratios1 = map_param_grid.get_N_to_C_ratios(stats_grids[1],
-                                                   v_N_L, v_C_L)
-        dRatios_by_passive[key0] = np.log(ratios1) - np.log(ratios0);
+        assert v_N_L == ts[1].get_v_N_L()
+        assert v_C_L == ts[1].get_v_C_L()
+        ratios0 = map_param_grid.get_N_to_C_ratios(stats_grids[0], v_N_L, v_C_L)
+        ratios1 = map_param_grid.get_N_to_C_ratios(stats_grids[1], v_N_L, v_C_L)
+        dRatios_by_passive[key0] = np.log(ratios1) - np.log(ratios0)
     return dRatios_by_passive
 
 
-def get_ts_with_parameters(MW=27,
-                           NLS_strength=0,
-                           is_force=False,
-                           is_change_cell_volume=False,
-                           **kwargs):
-    if is_force and is_change_cell_volume:
-        v_N_L = 762e-15
-        v_C_L = 4768e-15
-    else:
-        v_N_L = 627e-15
-        v_C_L = 2194e-15
-    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L,
-                                                  v_C_L=v_C_L)
+def get_ts_with_parameters(MW=27, NLS_strength=0, is_force=False, is_change_cell_volume=False, **kwargs):
+    v_N_L, v_C_L = (762e-15, 4768e-15) if is_force and is_change_cell_volume else (627e-15, 2194e-15)
+    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L, v_C_L=v_C_L)
     ts.set_time_step(0.1e-3)
-    ts.set_NPC_dock_sites(n_NPCs=2000,
-                          n_dock_sites_per_NPC=500)
+    ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
     ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 1.0e+6  # TODO: this is doubled relative to complex_N to free_N
     ts.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 1.0e+6
     ts.rate_complex_to_NPC_per_free_site_per_sec_per_M = 50e+6
@@ -477,30 +448,6 @@ def get_ts_with_parameters(MW=27,
 
 def get_free_to_complex_rate(NLS_strength):
     return free_to_complex_rates[NLS_strength]
-
-
-def get_passive_nuclear_molar_rate_per_sec(MW,
-                                           is_force):  # TODO: verify it corresponds to multiplyng by concentration rather than nmolecules
-    #TODO: generalize this - either from the literature or regression
-    base_rates = {27: 0.0805618,
-                  41: 0.06022355,
-                  54: 0.03301662,
-                  67: 0.0287649}
-    rate = base_rates[MW]
-    if is_force:
-        rate += get_force_effect_on_diffusion(MW)
-    return rate
-
-
-def get_force_effect_on_diffusion(MW):
-    """
-    The effect of force on passive diffusion as measured by experiment
-    """
-    effects = {27: 0.08214946,
-               41: 0.03027974,
-               54: 0.01,  # 54:0.00026308,
-               67: 0.01}  #67:0.00272423 }
-    return effects[MW]
 
 
 def get_fraction_complex_NPC_traverse_per_sec(MW, is_force):
@@ -572,9 +519,7 @@ def do_simulate(ts, simulation_time_sec):
     return ts.simulate(simulation_time_sec)
 
 
-def get_MW_stats_list_by_force(MW, simulation_time_sec,
-                               n_processors,
-                               is_change_cell_volume=False):
+def get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors, is_change_cell_volume=False):
     assert (MW in [27, 41, 54, 67])
     stats_list_by_force = {}
     TSs_by_force = {}
@@ -587,11 +532,10 @@ def get_MW_stats_list_by_force(MW, simulation_time_sec,
                                         is_change_cell_volume=is_change_cell_volume)
             TS_tuples.append((ts, simulation_time_sec))
         pool = multiprocess.Pool(processes=n_processors)
-        stats_list_by_force[is_force] = pool.starmap(do_simulate,
-                                                     TS_tuples)
+        stats_list_by_force[is_force] = pool.starmap(do_simulate, TS_tuples)
         TSs_by_force[is_force] = [x[0] for x in TS_tuples]
         print(f"Is force {is_force} i_NLS {i_NLS}: OK")
-    return (stats_list_by_force, TSs_by_force)
+    return stats_list_by_force, TSs_by_force
 
 
 def plot_MW_stats_list(stats_list_by_force, TSs_by_force):
@@ -618,32 +562,22 @@ def plot_MW_stats_list(stats_list_by_force, TSs_by_force):
             ts = TSs_by_force[is_force][i_NLS]
             labels = ['L', 'U']
             x = stats['time_sec']
-            ys = {}
-            ys[0] = stats['nuclear_importL_per_sec'] + stats['nuclear_importU_per_sec']
-            ys[1] = stats['nuclear_exportL_per_sec'] + stats['nuclear_exportU_per_sec']
-            ys[2] = get_N_C_ratio_stats(ts,
-                                        stats,
-                                        labels)
-            ys[3] = get_compartment_concentration_stats(ts,
-                                                        stats,
-                                                        'C',
-                                                        labels)
-            ys[4] = get_compartment_concentration_stats(ts,
-                                                        stats,
-                                                        'N',
-                                                        labels)
+            ys = {
+                0: stats['nuclear_importL_per_sec'] + stats['nuclear_importU_per_sec'],
+                1: stats['nuclear_exportL_per_sec'] + stats['nuclear_exportU_per_sec'],
+                2: get_N_C_ratio_stats(ts, stats, labels),
+                3: get_compartment_concentration_stats(ts, stats, 'C', labels),
+                4: get_compartment_concentration_stats(ts, stats, 'N', labels),
+                6: stats['complexL_NPC_N_import'] + stats['complexL_NPC_C_import'] + stats['complexL_NPC_N_export'] +
+                   stats['complexL_NPC_C_export'] + stats['complexU_NPC_C_import'] + stats['complexU_NPC_C_import'] +
+                   stats['complexU_NPC_N_export'] + stats['complexU_NPC_C_export']
+            }
             ys[5] = ys[3] - ys[4]
-            ys[6] = stats['complexL_NPC_N_import'] + stats['complexL_NPC_C_import'] + stats['complexL_NPC_N_export'] + \
-                    stats['complexL_NPC_C_export'] \
-                    + stats['complexU_NPC_C_import'] + stats['complexU_NPC_C_import'] + stats['complexU_NPC_N_export'] + \
-                    stats['complexU_NPC_C_export']
             for iextra, extra in enumerate(extras):
                 ys[7 + iextra] = stats[extra]
             plot_from_frame = int(plot_from_sec / ts.dt_sec)
             for i_row, ax in enumerate(axes):
-                ax.plot(x[plot_from_frame:],
-                        ys[i_row][plot_from_frame:],
-                        label=get_free_to_complex_rate(i_NLS))
+                ax.plot(x[plot_from_frame:], ys[i_row][plot_from_frame:], label=get_free_to_complex_rate(i_NLS))
                 ax.set_xlabel(r"time [$sec$]")
                 if is_force:
                     ratios[i_row, i_NLS] *= ys[i_row][-1]
@@ -662,7 +596,7 @@ def plot_MW_stats_list(stats_list_by_force, TSs_by_force):
             axes[4].set_ylabel(r"N [$M$]")
             axes[4].set_yscale('log')
             axes[5].set_ylabel(r"$\Delta$(C,N) [$M$]")
-            axes[5].set_yscale('symlog', linthreshy=1e-9)
+            axes[5].set_yscale('symlog', linthresh=1e-9)
             axes[6].set_ylabel('NPC [nmol]')
             for iextra, extra in enumerate(extras):
                 axes[7 + iextra].set_ylabel(extra)
@@ -673,10 +607,7 @@ def plot_MW_stats_list(stats_list_by_force, TSs_by_force):
     NLSs = [get_free_to_complex_rate(i_NLS) for i_NLS in range(ratios.shape[1])]
     ax_grid[2, 0].set_title("Mechanosensitivity")
     for i_row, ax in enumerate(ax_grid[2, :]):
-        ax.bar(range(len(NLSs)),
-               ratios[i_row, :],
-               width=0.8,
-               tick_label=NLSs)
+        ax.bar(range(len(NLSs)), ratios[i_row, :], width=0.8, tick_label=NLSs)
         ax.set_xlabel('NLS strength')
 
     handles, labels = ax_grid[0, 0].get_legend_handles_labels()
@@ -731,12 +662,10 @@ if __name__ == '__main__':
     #  CELL 11:
     # RUN:
     sim_time_sec = 50.0
-    sim_flags = dict()  #rate_free_to_complex_per_sec=1.0,
+    sim_flags = {}  #rate_free_to_complex_per_sec=1.0,
     #max_passive_diffusion_rate_nmol_per_sec_per_M=2e7)
     #ts= get_ts_time_series(dt_sec= 2e-3, **sim_flags)
-    ts = get_ts_time_series_3(passive_nuclear_molar_rate_per_sec=0.04,
-                              is_force=False,
-                              **sim_flags)
+    ts = get_ts_time_series_3(passive_nuclear_molar_rate_per_sec=0.04, is_force=False, **sim_flags)
     stats = ts.simulate(sim_time_sec, nskip_statistics=10)
 
 
@@ -773,9 +702,7 @@ if __name__ == '__main__':
     #plt.ylim(0,5)
     plt.figure()
     for tag in ['import', 'export']:
-        plt.plot(stats['time_sec'],
-                 stats[f'nuclear_{tag}L_per_sec'],
-                 label=tag)
+        plt.plot(stats['time_sec'], stats[f'nuclear_{tag}L_per_sec'], label=tag)
         plt.yscale('log')
         plt.legend()
 
@@ -786,22 +713,14 @@ if __name__ == '__main__':
                                  rate_GDP_N_to_GTP_N_per_sec=0.2)
     #fig, ax = plt.subplots(1, 3,figsize=(40,5))
     stats_slow = ts_slow.simulate(sim_time_sec)
-    ax = plot_simulation_attributes(stats_slow,
-                                    [cargoL_attributes],
-                                    log=is_log)
+    ax = plot_simulation_attributes(stats_slow, [cargoL_attributes], log=is_log)
     plt.title("slow GDP_N to GTP_N rate")
     ts_normal = get_ts_time_series(2e-3)
     stats_normal = ts_normal.simulate(sim_time_sec)
-    ax = plot_simulation_attributes(stats_normal,
-                                    [cargoL_attributes],
-                                    log=is_log)
+    ax = plot_simulation_attributes(stats_normal, [cargoL_attributes], log=is_log)
     plt.title("normal GDP_N to GTP_N rate")
 
     ## Map parameters phasespace of transport
-
-
-    #  CELL 18:
-    importlib.reload(map_param_grid)
 
 
     #  CELL 21:
@@ -826,25 +745,19 @@ if __name__ == '__main__':
     NC_max = 8.0
     # N/C
     plt.sca(axes[0, 0])
-    map_param_grid.plot_NC_ratios(param_range2, stats_grids_passive, ts_passive,
-                                  vmin=NC_min, vmax=NC_max)
+    map_param_grid.plot_NC_ratios(param_range2, stats_grids_passive, ts_passive, vmin=NC_min, vmax=NC_max)
     # Bound fraction
-    map_param_grid.plot_bound_fraction(param_range2, stats_grids_passive,
-                                       'N', ax=axes[0, 1])
-    map_param_grid.plot_bound_fraction(param_range2, stats_grids_passive,
-                                       'C', ax=axes[0, 2])
+    map_param_grid.plot_bound_fraction(param_range2, stats_grids_passive, 'N', ax=axes[0, 1])
+    map_param_grid.plot_bound_fraction(param_range2, stats_grids_passive, 'C', ax=axes[0, 2])
     # Import/export
-    map_param_grid.plot_import_export(param_range2,
-                                      stats_grids_passive,
-                                      axes=[axes[1, 0], axes[1, 1]])
+    map_param_grid.plot_import_export(param_range2, stats_grids_passive, axes=[axes[1, 0], axes[1, 1]])
     plt.sca(axes[1, 2])
     ratios_import_export = map_param_grid.get_import_export_ratios(stats_grids_passive)
-    map_param_grid.plot_param_grid(param_range2,
-                                   ratios_import_export,
-                                   Z_label='import:export',
-                                   vmin=NC_min, vmax=NC_max,
-                                   levels=np.linspace(NC_min, NC_max, 21),
-                                   extend='both')
+    map_param_grid.plot_param_grid(param_range2, ratios_import_export, Z_label='import:export', vmin=NC_min,
+                                   vmax=NC_max, levels=np.linspace(NC_min, NC_max, 21), extend='both')
+    print("End of cell 22")
+    plt.show()
+    time.sleep(5)
     print(param_range)
     print(param_range2)
 
@@ -871,12 +784,13 @@ if __name__ == '__main__':
     param_range = get_param_range_traverse_kon(nx=10, ny=10)
     print(param_range)
     n_processors = multiprocess.cpu_count()
-    CACHE = True
-    if CACHE:
-        stats_grids_traverse_by_passive_force = {}  # 2D maps of statistics for different passive diffusion params
-        ts_traverse_by_passive_force = {}  #  transport simulaiton object used for each
+    stats_grids_traverse_by_passive_force = {}  # 2D maps of statistics for different passive diffusion params
+    ts_traverse_by_passive_force = {}  # transport simulaiton object used for each
     print("*** Starting multiprocess run ***")
-    for passive in np.logspace(np.log10(0.005), np.log10(0.15), 15):  #0.01,0.09,6):
+    from tqdm.auto import tqdm
+    passive_space = np.logspace(np.log10(0.005), np.log10(0.15), 15) # 0.01,0.09,6)
+    for i in tqdm(range(len(passive_space))):
+        passive = passive_space[i]
         for is_force_volume in [False]:  # [False, True]
             def transport_simulation_generator(**kwargs):
                 return get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec=passive,
@@ -897,17 +811,14 @@ if __name__ == '__main__':
                              vmax_import_export=10.0,
                              NC_max=30.0,
                              NC_min=1.0)
+    print("End of cell 28")
+    plt.show()
+    time.sleep(5)
     print("*** Finished multiprocess run ***")
     # Pickle results
 
     with open("./Results/Heatmaps_Ran20uM.pkl", "wb") as F:
-        pickle.dump(
-            [stats_grids_traverse_by_passive_force, ts_traverse_by_passive_force],
-            F)
-
-
-    #  CELL 29:
-    os.system('ls')
+        pickle.dump([stats_grids_traverse_by_passive_force, ts_traverse_by_passive_force], F)
 
 
     #  CELL 30:
@@ -916,11 +827,11 @@ if __name__ == '__main__':
         if key[1]:
             continue
         print(f"passive rate {key[0]} is force {key[1]}")
-        plot_stats_grids(stats_grids_traverse_by_passive_force[key],
-                         ts_traverse_by_passive_force[key],
-                         vmax_import_export=10.0,
-                         NC_max=3.0,
-                         NC_min=1.0)
+        plot_stats_grids(stats_grids_traverse_by_passive_force[key], ts_traverse_by_passive_force[key],
+                         vmax_import_export=10.0, NC_max=3.0, NC_min=1.0)
+    print("End of cell 30")
+    plt.show()
+    time.sleep(5)
 
     #  CELL 31:
     keys = sorted(stats_grids_traverse_by_passive_force.keys(), key=lambda x: (x[0], x[1]))
@@ -928,11 +839,11 @@ if __name__ == '__main__':
         if key[1]:
             continue
         print(f"passive rate {key[0]} is force {key[1]}")
-        plot_stats_grids(stats_grids_traverse_by_passive_force[key],
-                         ts_traverse_by_passive_force[key],
-                         vmax_import_export=10.0,
-                         NC_max=30.0,
-                         NC_min=1.0)
+        plot_stats_grids(stats_grids_traverse_by_passive_force[key], ts_traverse_by_passive_force[key],
+                         vmax_import_export=10.0, NC_max=30.0, NC_min=1.0)
+    print("End of cell 31")
+    plt.show()
+    time.sleep(5)
 
     ## Heatmaps with Ran of 40 mM
 
@@ -943,12 +854,13 @@ if __name__ == '__main__':
     param_range = get_param_range_traverse_kon(nx=7, ny=7)
     print(param_range)
     n_processors = multiprocess.cpu_count()
-    CACHE = True
-    if not CACHE:
-        stats_grids_traverse_by_passive_force = {}  # 2D maps of statistics for different passive diffusion params
-        ts_traverse_by_passive_force = {}  #  transport simulaiton object used for each
+    stats_grids_traverse_by_passive_force = {}  # 2D maps of statistics for different passive diffusion params
+    ts_traverse_by_passive_force = {}  #  transport simulaiton object used for each
     print("*** Starting multiprocess run ***")
-    for passive in np.logspace(np.log10(0.01), np.log10(0.15), 15):  #0.01,0.09,6):
+    from tqdm.auto import tqdm
+    passive_space = np.logspace(np.log10(0.01), np.log10(0.15), 15)  # 0.01,0.09,6)
+    for i in tqdm(range(len(passive_space))):
+        passive = passive_space[i]
         for is_force_volume in [False]:  # [False, True]
             def transport_simulation_generator(**kwargs):
                 print(f"Ran: {Ran_cell_M:.6f} M")
@@ -971,14 +883,15 @@ if __name__ == '__main__':
                              vmax_import_export=10.0,
                              NC_max=30.0,
                              NC_min=1.0)
+    print("End of cell 33")
+    plt.show()
+    time.sleep(5)
     print("*** Finished multiprocess run ***")
 
     # Pickle results
 
     with open(f"./Results/Heatmaps_Ran{(1E6 * Ran_cell_M):.0f}uM.pkl", "wb") as F:
-        pickle.dump(
-            [stats_grids_traverse_by_passive_force, ts_traverse_by_passive_force],
-            F)
+        pickle.dump([stats_grids_traverse_by_passive_force, ts_traverse_by_passive_force], F)
     os.system('ls Results')
 
     ## Heatmaps with Ran of 80 mM
@@ -995,7 +908,10 @@ if __name__ == '__main__':
         stats_grids_traverse_by_passive_force = {}  # 2D maps of statistics for different passive diffusion params
         ts_traverse_by_passive_force = {}  #  transport simulaiton object used for each
     print("*** Starting multiprocess run ***")
-    for passive in np.logspace(np.log10(0.01), np.log10(0.1), 10):  #0.01,0.09,6):
+    from tqdm.auto import tqdm
+    passive_space = np.logspace(np.log10(0.01), np.log10(0.1), 10) # 0.01,0.09,6)
+    for i in tqdm(range(len(passive_space))):
+        passive = passive_space[i]
         for is_force_volume in [False]:  # [False, True]
             def transport_simulation_generator(**kwargs):
                 print(f"Ran: {Ran_cell_M:.6f} M")
@@ -1010,23 +926,20 @@ if __name__ == '__main__':
                 continue
             stats_grids_traverse_by_passive_force[key], \
                 ts_traverse_by_passive_force[key] = \
-                map_param_grid.map_param_grid_parallel(param_range,
-                                                       equilibration_time_sec=100.0,
+                map_param_grid.map_param_grid_parallel(param_range, equilibration_time_sec=100.0,
                                                        n_processors=n_processors // 2,
                                                        transport_simulation_generator=transport_simulation_generator)
             print(f"passive rate {passive} is old force_volume {is_force_volume}")
-            plot_stats_grids(stats_grids_traverse_by_passive_force[key],
-                             ts_traverse_by_passive_force[key],
-                             vmax_import_export=10.0,
-                             NC_max=30.0,
-                             NC_min=1.0)
+            plot_stats_grids(stats_grids_traverse_by_passive_force[key], ts_traverse_by_passive_force[key],
+                             vmax_import_export=10.0, NC_max=30.0, NC_min=1.0)
+    print("End of cell 36")
+    plt.show()
+    time.sleep(5)
     print("*** Finished multiprocess run ***")
     # Pickle results
 
     with open(f"./Results/Heatmaps_Ran{(1E6 * Ran_cell_M):.0f}uM.pkl", "wb") as F:
-        pickle.dump(
-            [stats_grids_traverse_by_passive_force, ts_traverse_by_passive_force],
-            F)
+        pickle.dump([stats_grids_traverse_by_passive_force, ts_traverse_by_passive_force], F)
     os.system('ls Results')
 
     ## Run 03 on cluster (~/raveh_lab/Projects/npctransport_kinetics/run03/)
@@ -1036,7 +949,7 @@ if __name__ == '__main__':
     importlib.reload(map_param_grid)
 
     with open("run03/run03.pkl", "rb") as F:
-        stats_grids_by_passive, ts_by_passive = pickle.load(F)
+        stats_grids_by_passive, ts_by_passive, param_range = pickle.load(F)
     param_range = {'tag_x': 'fraction_complex_NPC_traverse_per_sec',
                    'range_x': np.array([1., 1.24093776, 1.53992653, 1.91095297,
                                         2.37137371, 2.94272718, 3.65174127, 4.53158364,
@@ -1063,7 +976,6 @@ if __name__ == '__main__':
 
     print([f'{state}{label}_N' for state in ['free', 'complex'] for label in ['L', 'U']])
     print(stats_grids_by_passive.keys())
-
 
     #  CELL 39:
     if False:
@@ -1092,31 +1004,25 @@ if __name__ == '__main__':
                     continue
                 stats_grids_traverse_by_passive_force[key], \
                     ts_traverse_by_passive_force[key] = \
-                    map_param_grid.map_param_grid_parallel(param_range,
-                                                           equilibration_time_sec=100.0,
+                    map_param_grid.map_param_grid_parallel(param_range, equilibration_time_sec=100.0,
                                                            n_processors=n_processors // 2,
                                                            transport_simulation_generator=transport_simulation_generator)
                 print(f"passive rate {passive} is old force_volume {is_force_volume}")
-                plot_stats_grids(stats_grids_traverse_by_passive_force[key],
-                                 ts_traverse_by_passive_force[key],
-                                 vmax_import_export=10.0,
-                                 NC_max=30.0,
-                                 NC_min=1.0)
+                plot_stats_grids(stats_grids_traverse_by_passive_force[key], ts_traverse_by_passive_force[key],
+                                 vmax_import_export=10.0, NC_max=30.0, NC_min=1.0)
         print("*** Finished multiprocess run ***")
         # Pickle results
 
         with open(f"./Results/Heatmaps_Ran{(1E6 * Ran_cell_M):.0f}uM.pkl", "wb") as F:
-            pickle.dump(
-                [stats_grids_traverse_by_passive_force, ts_traverse_by_passive_force],
-                F)
+            pickle.dump( [stats_grids_traverse_by_passive_force, ts_traverse_by_passive_force], F)
         os.system('ls Results')
 
 
     #  CELL 40:
     pd.set_option("display.max_columns", None)
-    df = mpg.get_df_from_stats_grids_by_passive \
+    df = map_param_grid.get_df_from_stats_grids_by_passive \
         (param_range, stats_grids_by_passive, ts_by_passive)
-    display(df.head())
+    print(df.head())
 
 
     #  CELL 42:
@@ -1129,30 +1035,20 @@ if __name__ == '__main__':
     NLSs = df['passive_rate'].unique()[:]
     ncol = 3
     nrow = len(NLSs) // ncol + (len(NLSs) % ncol > 0) * 1
-    fig, axes = plt.subplots(nrow, ncol,
-                             sharex=True,
-                             sharey=True,
-                             squeeze=False,
-                             figsize=(17.0, 4.0 * nrow + 1.0))
+    fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=True, squeeze=False, figsize=(17.0, 4.0 * nrow + 1.0))
     axes_iter = iter(axes.reshape(-1))
+    import pdb; pdb.set_trace()
     for NLS in NLSs:
         ax = next(axes_iter)
         is_NLS = np.isclose(df['rate_free_to_complex_per_sec'], NLS)
-        N2C = df[is_NLS].pivot(index='passive_rate',
-                               columns='fraction_complex_NPC_traverse_per_sec',
-                               values='N2C')
+        N2C = df[is_NLS].pivot(index='passive_rate', columns='fraction_complex_NPC_traverse_per_sec', values='N2C')
         NC_min = 1.0
         NC_max = 10.0
         plt.sca(ax)
-        ct = my_plot_param_grid(N2C,
-                                pretty_x=r'rate NPC traverse [$sec^{-1}$]',
-                                pretty_y=r'passive rate [$sec^{-1}$]',
-                                pretty_z=r'N:C',
-                                vmin=NC_min,
-                                vmax=NC_max,
+        ct = my_plot_param_grid(N2C, pretty_x=r'rate NPC traverse [$sec^{-1}$]', pretty_y=r'passive rate [$sec^{-1}$]',
+                                pretty_z=r'N:C', vmin=NC_min, vmax=NC_max,
                                 levels=np.logspace(np.log2(NC_min), np.log2(NC_max), 21, base=2.0),
-                                locator=mpl.ticker.LogLocator(base=2.0),
-                                extend='both')
+                                locator=mpl.ticker.LogLocator(base=2.0), extend='both')
         colors = ['r', 'g', 'b', 'k']
         ylim = ax.get_ylim()
         for MW, color in zip(MWs, colors):
@@ -1172,6 +1068,7 @@ if __name__ == '__main__':
     ticks = cb.get_ticks()
     cb.set_ticks(ticks)
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    print("End of cell 43")
     plt.show()
 
 
@@ -1223,6 +1120,7 @@ if __name__ == '__main__':
     ticks = cb.get_ticks()
     cb.set_ticks(ticks)
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    print("End of cell 44")
     plt.show()
 
     ## absolute dZ/dY (normalized by Z)
@@ -1284,6 +1182,7 @@ if __name__ == '__main__':
         ticks = cb.get_ticks()
         cb.set_ticks(ticks)
         cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    print("End of cell 46")
     plt.show()
 
 
@@ -1347,6 +1246,7 @@ if __name__ == '__main__':
         ticks = cb.get_ticks()
         cb.set_ticks(ticks)
         cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    print("End of cell 48")
     plt.show()
 
     # Get precise numbers for figures (Jul 8, 2021)
@@ -1424,7 +1324,6 @@ if __name__ == '__main__':
         ax[1].yaxis.set_minor_locator(ticker.FixedLocator([]))
         ax[1].yaxis.set_minor_formatter(ticker.FixedFormatter([]))
         ax[0].set_xticks(MWs)
-        plt.show()
         print("MWs", MWs)
         print("N2C soft", N2Cs_no)
         print("N2C stiff", N2Cs_yes)
@@ -1449,12 +1348,13 @@ if __name__ == '__main__':
         ax[1].yaxis.set_minor_formatter(ticker.FixedFormatter([]))
         ax[0].set_xlim(xmin=1.0, xmax=xmax)
         ax[0].set_xscale('log')
-        plt.show()
         print("NLSs", NLSs_subset)
         print("N2C soft", N2C_by_NLS_no)
         print("N2C stiff", N2C_by_NLS_yes)
         print("mechano:", Mechano_by_NLS)
         print()
+    print("End of cell 51")
+    plt.show()
 
 
     ## import/export
@@ -1481,7 +1381,7 @@ if __name__ == '__main__':
                             1.72424412e+00])
     empty_stats = {'import': [],
                    'export': [],
-                   'i2e': []}
+                   'import:export': []}
     Yes_by_NLS = copy.deepcopy(empty_stats)
     No_by_NLS = copy.deepcopy(empty_stats)
     Mechanos_by_NLS = copy.deepcopy(empty_stats)
@@ -1513,7 +1413,7 @@ if __name__ == '__main__':
             for Stats, ix, iy in zip([No, Yes], [ix0, ix1], [iy0, iy1]):
                 Stats['import'].append(df_import.iloc[iy, ix])
                 Stats['export'].append(df_export.iloc[iy, ix])
-                Stats['i2e'].append(Stats['import'][-1] / Stats['export'][-1])
+                Stats['import:export'].append(Stats['import'][-1] / Stats['export'][-1])
             for category in empty_stats.keys():
                 Mechanos[category].append(Yes[category][-1] / No[category][-1])
             if MW == 41:
@@ -1523,10 +1423,10 @@ if __name__ == '__main__':
                     Mechanos_by_NLS[category].append(Mechanos[category][-1])
         if PLOT_EACH:
             fig, ax = plt.subplots(4, 1, figsize=(3.5, 9), sharex=True)
-            for i, category in enumerate(['import', 'export', 'i2e']):
+            for i, category in enumerate(['import', 'export', 'import:export']):
                 ax[i].plot(np.array(MWs) - 1, No[category], 'bo', label='soft', markersize=4)
                 ax[i].plot(np.array(MWs) + 1, Yes[category], 'ro', label='stiff', markersize=4)
-                ax[i].set_ylabel(category if category != 'i2e' else 'import:export')
+                ax[i].set_ylabel(category)
                 ax[i].legend(frameon=True)
                 ax[i].set_xticks(MWs)
                 if category in ['import', 'export']:
@@ -1542,7 +1442,6 @@ if __name__ == '__main__':
             ax[-1].yaxis.set_major_formatter(ticker.FixedFormatter(positions))
             ax[-1].yaxis.set_minor_locator(ticker.FixedLocator([]))
             ax[-1].yaxis.set_minor_formatter(ticker.FixedFormatter([]))
-            plt.show()
             print("MWs", MWs)
             print("Soft", No)
             print("Stiff", Yes)
@@ -1551,10 +1450,10 @@ if __name__ == '__main__':
 
     for xmax in [None, 400.0]:
         fig, ax = plt.subplots(4, 1, figsize=(3.5, 9), sharex=True)
-        for i, category in enumerate(['import', 'export', 'i2e']):
+        for i, category in enumerate(['import', 'export', 'import:export']):
             ax[i].plot(NLSs_subset * 1e3 - 1, No_by_NLS[category], 'bo', label='soft', markersize=4)
             ax[i].plot(NLSs_subset * 1e3 + 1, Yes_by_NLS[category], 'ro', label='stiff', markersize=4)
-            ax[i].set_ylabel(category if category != 'i2e' else 'import:export')
+            ax[i].set_ylabel(category)
             ax[i].legend(frameon=True)
             ax[i].set_xlim(xmin=1.0, xmax=xmax)
             ax[i].set_xscale('log')
@@ -1571,12 +1470,13 @@ if __name__ == '__main__':
         ax[-1].yaxis.set_major_formatter(ticker.FixedFormatter(positions))
         ax[-1].yaxis.set_minor_locator(ticker.FixedLocator([]))
         ax[-1].yaxis.set_minor_formatter(ticker.FixedFormatter([]))
-        plt.show()
         print("NLSs", NLSs_subset)
         print("Soft", No_by_NLS)
         print("Stiff", Yes_by_NLS)
         print("Mechano:", Mechano_by_NLS)
         print()
+    print("End of cell 54")
+    plt.show()
 
 
     ## transform
@@ -1656,7 +1556,6 @@ if __name__ == '__main__':
         ax[1].yaxis.set_major_formatter(ticker.FixedFormatter(positions))
         ax[1].yaxis.set_minor_locator(ticker.FixedLocator([]))
         ax[1].yaxis.set_minor_formatter(ticker.FixedFormatter([]))
-        plt.show()
         print("MWs", MWs)
         print("N sat. soft", Nsat_no)
         print("N sat. stiff", Nsat_yes)
@@ -1680,12 +1579,13 @@ if __name__ == '__main__':
     ax[1].yaxis.set_major_formatter(ticker.FixedFormatter(positions))
     ax[1].yaxis.set_minor_locator(ticker.FixedLocator([]))
     ax[1].yaxis.set_minor_formatter(ticker.FixedFormatter([]))
-    plt.show()
     print("NLSs", NLSs_subset)
     print("Nsat soft", Nsat_by_NLS_no)
     print("Nsat stiff", Nsat_by_NLS_yes)
     print("mechano:", Mechano_by_NLS)
     print()
+    print("End of cell 60")
+    plt.show()
 
 
     ## Normalized dX, dY and Z (transformed or not)
@@ -1702,6 +1602,8 @@ if __name__ == '__main__':
         plot_dX_dY_Z(df,
                      is_transform=is_transform,
                      N2C_vol=N2C_vol)
+    print("End of cell 62")
+    plt.show()
 
 
     #  CELL 63:
@@ -1752,11 +1654,14 @@ if __name__ == '__main__':
     ticks = cb.get_ticks()
     cb.set_ticks(ticks)
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    print("End of cell 63")
     plt.show()
 
 
     #  CELL 64:
     plot_cells()
+    print("End of cell 64")
+    plt.show()
 
     ## next one
 
@@ -1764,25 +1669,18 @@ if __name__ == '__main__':
     dRatios_by_passive = get_dLogRatios_by_passive(stats_grids_by_passive, ts_by_passive)
     for key in sorted(stats_grids_by_passive.keys())[:-1]:
         print(key)
-        mpg.plot_param_grid(param_range,
-                            dRatios_by_passive[key],
-                            Z_label="dN/C log ratio",
-                            vmin=-4.0,
-                            vmax=1.0,
-                            levels=np.linspace(-4.0, 1.0, 21),
-                            extend='both')
-        plt.show()
+        map_param_grid.plot_param_grid(param_range, dRatios_by_passive[key], Z_label="dN/C log ratio", vmin=-4.0, vmax=1.0,
+                            levels=np.linspace(-4.0, 1.0, 21), extend='both')
+    print("End of cell 66")
+    plt.show()
 
 
     #  CELL 67:
     keys = sorted(stats_grids_traverse_by_passive_force.keys())
     for key in keys:
         print(f"passive rate {key}")
-        plot_stats_grids(stats_grids_traverse_by_passive_force[key],
-                         ts_traverse_by_passive_force[key],
-                         vmax_import_export=10.0,
-                         NC_max=30.0,
-                         NC_min=1.0)
+        plot_stats_grids(stats_grids_traverse_by_passive_force[key], ts_traverse_by_passive_force[key],
+                         vmax_import_export=10.0, NC_max=30.0, NC_min=1.0)
 
     # Map NLS strength, MW size, force
 
@@ -1810,49 +1708,30 @@ if __name__ == '__main__':
     #  CELL 73:
     ##### TIME CONSUMING #####$
     simulation_time_sec = 40.0
-    n_processors = 6
+    n_processors = os.cpu_count()
     MW_to_stats_list_by_force = {}
     for MW in [27, 41, 54, 67]:
         print(MW)
-        MW_to_stats_list_by_force[MW] = get_MW_stats_list_by_force(MW, simulation_time_sec,
-                                                                   n_processors=n_processors,
+        MW_to_stats_list_by_force[MW] = get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors=n_processors,
                                                                    is_change_cell_volume=False)
         plot_MW_stats_list(*MW_to_stats_list_by_force[MW])
-        plt.show()
-
-
-    #  CELL 75:
-    for MW in [27, 41, 54, 67]:
-        print(MW)
-        plot_MW_stats_list(*MW_to_stats_list_by_force[MW])
-        plt.show()
-
-
-    #  CELL 76:
-    ##### TIME CONSUMING #####$
-    simulation_time_sec = 40.0
-    n_processors = 6
-    MW_to_stats_list_by_force = {}
-    for MW in [27, 41, 54, 67]:
-        print(MW)
-        MW_to_stats_list_by_force[MW] = get_MW_stats_list_by_force(MW, simulation_time_sec,
-                                                                   n_processors=n_processors,
-                                                                   is_change_cell_volume=False)
-        plot_MW_stats_list(*MW_to_stats_list_by_force[MW])
-        plt.show()
+    print("End of cell 73")
+    plt.show()
+    time.sleep(5)
 
 
     #  CELL 77:
     ##### TIME CONSUMING #####$
     simulation_time_sec = 40.0
-    n_processors = 6
+    n_processors = os.cpu_count()
     MW_to_stats_list_by_force = {}
     for MW in [27, 41, 54, 67]:
         print(MW)
-        MW_to_stats_list_by_force[MW] = get_MW_stats_list_by_force(MW, simulation_time_sec,
-                                                                   n_processors=n_processors)
+        MW_to_stats_list_by_force[MW] = get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors=n_processors)
         plot_MW_stats_list(*MW_to_stats_list_by_force[MW])
-        plt.show()
+    print("End of cell 77")
+    plt.show()
+    time.sleep(5)
 
 
     #  CELL 79:
