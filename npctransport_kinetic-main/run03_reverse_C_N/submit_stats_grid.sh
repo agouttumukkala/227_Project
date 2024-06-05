@@ -9,7 +9,7 @@
 
 python - << EOF
 import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__name__))))
 import stats_grid
 
 stats_grid.get_stats_on_grid(
