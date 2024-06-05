@@ -192,19 +192,20 @@ def map_param_grid_parallel(param_range: dict,
 def _get_df_for_stats_grids(param_range: dict, passive_rate, stats_grids: dict,
                             ts: transport_simulation.TransportSimulation) -> pd.DataFrame:
     """
+    Takes the contents from stats grid dictionary and turns it into a singular pandas dataframe along with other useful
+    info (e.g. NPC traverse rates, free-to-complex rates, and the passive rate)
 
     :param param_range: a dictionary with 'tag_x'/'tag_y' keys corresponding
                         to x/y-axis param names, resp., and 'range_x'/'range_y' keys
                         for numpy array for corresponding param ranges
     :param passive_rate: the rate of passive diffusion in transport
-       simulations
+                         simulations
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
                         arrays (where each j-i pair is the result of a particular y-x pairing)
     :param ts: an instance of TransportSimulation (to obtain cytoplasmic and nuclear volumes)
-    :return:
+    :return: a Panda dataframe containing all the stats_grids info along with the corresponding NPC traverse,
+             free-to-complex, and passive rates
     """
-    # TODO: update docstring and typing
-    pdb.set_trace()
     X, Y = np.meshgrid(param_range['range_x'],
                        param_range['range_y'])
     df = pd.DataFrame(data={param_range['tag_x']: X.flatten(),
@@ -229,8 +230,8 @@ def _get_df_for_stats_grids(param_range: dict, passive_rate, stats_grids: dict,
 
 
 def get_df_from_stats_grids_by_passive(param_range: dict,
-                                       stats_grids_by_passive,
-                                       ts_by_passive) -> pd.DataFrame:
+                                       stats_grids_by_passive: dict,
+                                       ts_by_passive: dict) -> pd.DataFrame:
     """
     Converts stats_grids_by_passive returned by map_param_grid_parallel() etc.
     to a pandas dataframe with column 'passive rate' for passive rates, and
@@ -241,12 +242,13 @@ def get_df_from_stats_grids_by_passive(param_range: dict,
                         for numpy array for corresponding param ranges
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
                         arrays (where each j-i pair is the result of a particular y-x pairing)
-    :param stats_grids_by_passive:
-    :param ts_by_passive:
-    :return:
+    :param stats_grids_by_passive: dictionary of dictionaries where the values are stats_grids dictionaries and the keys passive rates are containing species information at the end of each
+                                   simulation in the form of numpy arrays (where each j-i pair is the result of a particular y-x pairing)
+    :param ts_by_passive: dictionary of sample transport simulations for each passive rate to used to obtain some basic
+                          information (e.g. cytoplasmic and nuclear volumes)
+    :return: a Panda dataframe containing all the stats_grids info for each passive rate along with the corresponding
+            NPC traverse, free-to-complex, and passive rates
     """
-    # TODO: update docstring and typing
-    pdb.set_trace()
     dfs = [_get_df_for_stats_grids(param_range,
                                    passive,
                                    stats_grids,
