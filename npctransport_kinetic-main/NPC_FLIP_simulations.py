@@ -1,5 +1,8 @@
 import os
 import importlib
+
+import pandas
+
 import transport_simulation
 from transport_simulation import TransportSimulation
 from matplotlib import pyplot as plt
@@ -34,7 +37,14 @@ def create_plot(plot, plot_data: list, xlabel=None, ylabel=None, set_lsandfs: bo
         plot.yaxis.set_minor_formatter(ticker.FixedFormatter([]))
 
 
-def plot_simulation_attributes(stats, attributes_list, log=True):
+def plot_simulation_attributes(stats, attributes_list, log: bool = True):
+    """
+
+
+    :param stats:
+    :param attributes_list:
+    :param log:
+    """
     def merge_lists(lists):
         return [x for y in lists for x in y]
 
@@ -58,7 +68,15 @@ def plot_simulation_attributes(stats, attributes_list, log=True):
     return axes
 
 
-def get_ts_time_series(dt_sec, **kwargs):
+def get_ts_time_series(dt_sec: float, **kwargs) -> transport_simulation.TransportSimulation:
+    """
+
+
+    :param dt_sec: time step for the simulation (in seconds)
+    :param kwargs: transport simulation parameters and their desired values (some parameters may be overridden later in
+                   this function)
+    :return: transport simulation with the appropriate parameters
+    """
     ts = TransportSimulation(v_N_L=627e-15, v_C_L=2194e-15, **kwargs)
     ts.bleach_start_time_sec = 400.0
     ts.set_time_step(dt_sec)
@@ -73,20 +91,20 @@ def get_ts_time_series(dt_sec, **kwargs):
     return ts
 
 
-def get_ts_time_series_2(passive_nuclear_molar_rate_per_sec,
-                         is_force,
-                         **kwargs):
-    if is_force:
-        v_N_L = 762e-15
-        v_C_L = 4768e-15
-    else:
-        v_N_L = 627e-15
-        v_C_L = 2194e-15
-    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L,
-                                                  v_C_L=v_C_L)
+def get_ts_time_series_2(passive_nuclear_molar_rate_per_sec: float, is_force: bool,
+                         **kwargs) -> transport_simulation.TransportSimulation:
+    """
+
+
+    :param passive_nuclear_molar_rate_per_sec: the max rate of passive diffusion in 1/(second*M)
+    :param is_force: whether the cell nucleus is experiencing force (cell volumes increase)
+    :param kwargs: transport simulation parameters and their desired values
+    :return: transport simulation with the appropriate parameters
+    """
+    v_N_L, v_C_L = (762e-15, 4768e-15) if is_force else (627e-15, 2194e-15)
+    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L, v_C_L=v_C_L)
     ts.set_time_step(1.0e-3)
-    ts.set_NPC_dock_sites(n_NPCs=2000,
-                          n_dock_sites_per_NPC=500)
+    ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
     ts.set_passive_nuclear_molar_rate_per_sec(
         passive_nuclear_molar_rate_per_sec)  #get_passive_export_rate_per_sec(27,1))
     ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 10.0e+6  # TODO: this is doubled relative to complex_N to free_N
@@ -106,21 +124,21 @@ def get_ts_time_series_2(passive_nuclear_molar_rate_per_sec,
     return ts
 
 
-def get_ts_time_series_3(passive_nuclear_molar_rate_per_sec,
-                         is_force,
-                         dt_sec=0.3e-3,
-                         **kwargs):
-    if is_force:
-        v_N_L = 762e-15
-        v_C_L = 4768e-15
-    else:
-        v_N_L = 627e-15
-        v_C_L = 2194e-15
-    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L,
-                                                  v_C_L=v_C_L)
+def get_ts_time_series_3(passive_nuclear_molar_rate_per_sec: float, is_force: bool, dt_sec: float = 0.3e-3,
+                         **kwargs) -> transport_simulation.TransportSimulation:
+    """
+
+
+    :param passive_nuclear_molar_rate_per_sec: the max rate of passive diffusion in 1/(second*M)
+    :param is_force: whether the cell nucleus is experiencing force (cell volumes increase)
+    :param dt_sec: time step for the simulation (in seconds)
+    :param kwargs: transport simulation parameters and their desired values
+    :return: transport simulation with the appropriate parameters
+    """
+    v_N_L, v_C_L = (762e-15, 4768e-15) if is_force else (627e-15, 2194e-15)
+    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L, v_C_L=v_C_L)
     ts.set_time_step(dt_sec)
-    ts.set_NPC_dock_sites(n_NPCs=2000,
-                          n_dock_sites_per_NPC=500)
+    ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
     ts.set_passive_nuclear_molar_rate_per_sec(
         passive_nuclear_molar_rate_per_sec)  #get_passive_export_rate_per_sec(27,1))
     ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 1.0e+6  # TODO: this is doubled relative to complex_N to free_N
@@ -140,7 +158,14 @@ def get_ts_time_series_3(passive_nuclear_molar_rate_per_sec,
     return ts
 
 
-def get_param_range_D_kon(nx, ny):
+def get_param_range_D_kon(nx: int, ny: int) -> dict:
+    """
+
+
+    :param nx:
+    :param ny:
+    :return:
+    """
     param_range = {}
     print(f"nx={nx} ny={ny}")
     epsilon = 1e-9
@@ -155,41 +180,54 @@ def get_param_range_D_kon(nx, ny):
     return param_range
 
 
-def get_transport_simulation_map_passive(**kwargs):
+def get_transport_simulation_map_passive(**kwargs) -> transport_simulation.TransportSimulation:
+    """
+
+
+    :param kwargs: transport simulation parameters and their desired values
+    :return: transport simulation with the appropriate parameters
+    """
     ts = transport_simulation.TransportSimulation(**kwargs)
     ts.set_time_step(1e-3)
     ts.set_v_N_L(627e-15, True)
     ts.set_v_C_L(2194e-15, True)
-    ts.set_NPC_dock_sites(n_NPCs=2000,
-                          n_dock_sites_per_NPC=500)
+    ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
     ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 0.5e+6  # TODO: this is doubled relative to complex_N to free_N
     ts.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 0.5e+6
     return ts
 
 
-def get_param_range_traverse_kon(nx, ny):
+def get_param_range_traverse_kon(nx: int, ny: int) -> dict:
+    """
+    Obtains the specific NPC traverse rate values and free-to-complex rate values to iterate over
+
+    :param nx: number of values used to discretize npc_traverse_range
+    :param ny: number of values used to discretize k_on_range
+    :return: dictionary containing information on the discrete NPC traverse rates (x-axis) and free-to-complex rates
+             (y-axis) to be modelled
+    """
     return stats_grid.get_param_range_traverse_kon(nx, ny, npc_traverse_range=(1, 1000), k_on_range=(0.01, 10))
 
 
-def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
-                                        is_force_volume,
-                                        Ran_cell_M=20.0e-6,
+def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec: float, is_force_volume: bool, Ran_cell_M: float = 20.0e-6,
                                         **kwargs):
-    if is_force_volume:
-        v_N_L = 762e-15
-        v_C_L = 4768e-15
-    else:
-        v_N_L = 627e-15
-        v_C_L = 2194e-15
-    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L,
-                                                  v_C_L=v_C_L)
+    """
+
+
+    :param passive_nuclear_molar_rate_per_sec: the max rate of passive diffusion in 1/(second*M)
+    :param is_force_volume: whether to use the volumes for when the cell nucleus is experiencing force
+    :param Ran_cell_M: total Ran concentration in the nucleus and cytoplasm combined (in M)
+    :param kwargs: transport simulation parameters and their desired values
+    :return: transport simulation with the appropriate parameters
+    """
+    v_N_L, v_C_L = (762e-15, 4768e-15) if is_force_volume else (627e-15, 2194e-15)
+    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L, v_C_L=v_C_L)
     ts.set_time_step(0.1e-3)
-    ts.set_NPC_dock_sites(n_NPCs=2000,
-                          n_dock_sites_per_NPC=500)
-    ts.set_passive_nuclear_molar_rate_per_sec(
-        passive_nuclear_molar_rate_per_sec)  #get_passive_export_rate_per_sec(27,1))
+    ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
     ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 1.0e+6  # TODO: this is doubled relative to complex_N to free_N
     ts.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 1.0e+6
+    ts.set_passive_nuclear_molar_rate_per_sec(
+        passive_nuclear_molar_rate_per_sec)  #get_passive_export_rate_per_sec(27,1))
     ts.rate_complex_to_NPC_per_free_site_per_sec_per_M = 50e+6
     ts.fraction_complex_NPC_to_complex_N_C_per_sec = 3000.0  # Leakage parameter
     ts.rate_GDP_N_to_GTP_N_per_sec = 1000.0
@@ -211,13 +249,32 @@ def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
     return ts
 
 
-def plot_stats_grids(stats_grids, transport_simulation, NC_min=1.0, NC_max=20.0, vmax_import_export=10.0):
+def plot_stats_grids(stats_grids, transport_simulation, NC_min=1.0, NC_max=20.0, vmax_import_export=10.0) -> None:
+    """
+    Calls stats_grid.py to create different contour plots (e.g. N/C ratio, bound fraction for nucleus and cytoplasm,
+    nuclear import and export rate plots, and import/export ratio plots)
+
+    :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
+                        arrays (where each j-i pair is the result of a particular y-x pairing)
+    :param transport_simulation: transport simulation instance used to obtain nuclear and cytoplasmic volumes
+    :param NC_min: min value for the N/C ratio axis
+    :param NC_max: max value for the N/C ratio axis
+    :param vmax_import_export: max value for the nuclear import and export rate plots
+    :return: None
+    """
     stats_grid.plot_stats_grids(stats_grids, transport_simulation, param_range, NC_min, NC_max, vmax_import_export)
 
 
-def get_passive_nuclear_molar_rate_per_sec(MW,
-                                           is_force):  # TODO: verify it corresponds to multiplyng by concentration rather than nmolecules
-    #TODO: generalize this - either from the literature or regression
+def get_passive_nuclear_molar_rate_per_sec(MW: int, is_force: bool) -> float:  # TODO: verify it corresponds to multiplyng by concentration rather than nmolecules
+    """
+    Obtains the maximum passive rate of nuclear diffusion given a cargo's molecular weight and whether the nucleus is
+    experiencing force
+
+    :param MW: molecular weight of the cargo molecule (in kDa)
+    :param is_force: whether the cell nucleus is experiencing force
+    :return: the max rate of passive diffusion in 1/(second*M)
+    """
+    import pdb; pdb.set_trace()
     base_rates = {27: 0.0805618,
                   41: 0.06022355,
                   54: 0.03301662,
@@ -228,9 +285,13 @@ def get_passive_nuclear_molar_rate_per_sec(MW,
     return rate
 
 
-def get_force_effect_on_diffusion(MW):
+def get_force_effect_on_diffusion(MW: int) -> float:
     """
-    The effect of force on passive diffusion as measured by experiment
+    Obtains the increase in passive diffusion rate as an effect of nuclear force for a given cargo molecular weight
+    (as measured by experiment)
+
+    :param MW: molecular weight of the cargo molecule (in kDa)
+    :return: the increase to max rate of passive diffusion in 1/(second*M)
     """
     effects = {27: 0.08214946,
                41: 0.03027974,
@@ -239,8 +300,19 @@ def get_force_effect_on_diffusion(MW):
     return effects[MW]
 
 
-def my_plot_param_grid(df,  # a pivoted 2D dataframe
+def my_plot_param_grid(df: pandas.DataFrame,  # a pivoted 2D dataframe
                        pretty_x=None, pretty_y=None, pretty_z=None, is_colorbar=False, **contourf_kwargs):
+    """
+
+
+    :param df:
+    :param pretty_x:
+    :param pretty_y:
+    :param pretty_z:
+    :param is_colorbar:
+    :param contourf_kwargs:
+    :return:
+    """
     X, Y = np.meshgrid(df.columns, df.index)
     ax = plt.gca()
     ctr = plt.contourf(X, Y, df.to_numpy(), **contourf_kwargs)
@@ -261,11 +333,26 @@ def my_plot_param_grid(df,  # a pivoted 2D dataframe
 
 
 def transform_N2C_to_N_relative(N2C, N2C_vol):
+    """
+
+    :param N2C:
+    :param N2C_vol:
+    :return:
+    """
+    import pdb; pdb.set_trace()
     N_relative = (N2C * N2C_vol) / (1 + N2C * N2C_vol)
     return N_relative
 
 
-def plot_dX_dY_Z(df, is_transform=False, N2C_vol=0.333):
+def plot_dX_dY_Z(df: pandas.DataFrame, is_transform: bool = False, N2C_vol: float = 0.333) -> None:
+    """
+
+
+    :param df:
+    :param is_transform:
+    :param N2C_vol:
+    :return: None
+    """
     NLSs = df['rate_free_to_complex_per_sec'].unique()
     NLS_starti = len(NLSs) // 4
     NLS_endi = len(NLSs) // 4 * 3
@@ -350,12 +437,23 @@ def plot_dX_dY_Z(df, is_transform=False, N2C_vol=0.333):
 
 
 def plot_cells(
-        cells_column='fraction_complex_NPC_traverse_per_sec',
-        pretty_cell="rate NPC traverse {:.1f} $sec^{{-1}}$",
-        x_column='passive_rate',
-        pretty_x=r'passive rate [$sec^{-1}$]',
-        y_column='rate_free_to_complex_per_sec',
-        pretty_y=r'NLS $k_{on}$ [$sec^{-1}$]'):
+        cells_column: str = 'fraction_complex_NPC_traverse_per_sec',
+        pretty_cell: str = "rate NPC traverse {:.1f} $sec^{{-1}}$",
+        x_column: str = 'passive_rate',
+        pretty_x: str = r'passive rate [$sec^{-1}$]',
+        y_column: str = 'rate_free_to_complex_per_sec',
+        pretty_y: str = r'NLS $k_{on}$ [$sec^{-1}$]') -> None:
+    """
+
+
+    :param cells_column:
+    :param pretty_cell:
+    :param x_column:
+    :param pretty_x:
+    :param y_column:
+    :param pretty_y:
+    :return: None
+    """
     plt.style.use('./my.mplstyle.txt')
     cells = df[cells_column].unique()[:2]
     ncol = 3
@@ -402,7 +500,15 @@ def plot_cells(
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
 
 
-def get_dLogRatios_by_passive(stats_grids_by_passive, ts_by_passive):
+def get_dLogRatios_by_passive(stats_grids_by_passive, ts_by_passive) -> dict:
+    """
+
+
+    :param stats_grids_by_passive:
+    :param ts_by_passive:
+    :return:
+    """
+    import pdb; pdb.set_trace()
     dRatios_by_passive = {}
     keys = sorted(stats_grids_by_passive.keys())
     for key0, key1 in zip(keys[:-1], keys[1:]):
@@ -418,7 +524,17 @@ def get_dLogRatios_by_passive(stats_grids_by_passive, ts_by_passive):
     return dRatios_by_passive
 
 
-def get_ts_with_parameters(MW=27, NLS_strength=0, is_force=False, is_change_cell_volume=False, **kwargs):
+def get_ts_with_parameters(MW: int = 27, NLS_strength: int = 0, is_force: bool = False,
+                           is_change_cell_volume: bool = False, **kwargs) -> transport_simulation.TransportSimulation:
+    """
+    Creates a
+
+    :param MW: molecular weight of the cargo molecule (in kDa)
+    :param NLS_strength: relative strength of the nuclear localization signal
+    :param is_force: whether the cell nucleus is experiencing force
+    :param is_change_cell_volume: whether the cell volumes change when force is applied
+    :return: transport simulation instance with the appropriate specs
+    """
     v_N_L, v_C_L = (762e-15, 4768e-15) if is_force and is_change_cell_volume else (627e-15, 2194e-15)
     ts = transport_simulation.TransportSimulation(v_N_L=v_N_L, v_C_L=v_C_L)
     ts.set_time_step(0.1e-3)
@@ -437,20 +553,32 @@ def get_ts_with_parameters(MW=27, NLS_strength=0, is_force=False, is_change_cell
     #
     ts.set_passive_nuclear_molar_rate_per_sec(
         get_passive_nuclear_molar_rate_per_sec(MW, is_force))
-    ts.set_params(rate_free_to_complex_per_sec=
-                  get_free_to_complex_rate(NLS_strength))
-    ts.set_params(fraction_complex_NPC_traverse_per_sec=
-                  get_fraction_complex_NPC_traverse_per_sec(MW, is_force))
+    ts.rate_free_to_complex_per_sec = get_free_to_complex_rate(NLS_strength)
+    ts.fraction_complex_NPC_traverse_per_sec = get_fraction_complex_NPC_traverse_per_sec(MW, is_force)
     #
     ts.set_params(**kwargs)  # override defaults
     return ts
 
 
-def get_free_to_complex_rate(NLS_strength):
+def get_free_to_complex_rate(NLS_strength: int) -> float:
+    """
+    Obtains the free cargo to complexed cargo conversion rate given an NLS strength
+
+    :param NLS_strength: relative strength of the nuclear localization sequence
+    :return float: rate of free cargo conversion to complexed cargo (in 1/sec)
+    """
     return free_to_complex_rates[NLS_strength]
 
 
-def get_fraction_complex_NPC_traverse_per_sec(MW, is_force):
+def get_fraction_complex_NPC_traverse_per_sec(MW: int, is_force: bool) -> float:
+    """
+    Calculates the fraction of complexes that go from one side of the NPC to the other per sec given the molecular
+    weight of the cargo and whether a force is being applied
+
+    :param MW: molecular weight of the cargo molecule (in kDa)
+    :param is_force: whether the cell nucleus is experiencing force
+    :return: the fraction of complexes that traverse the NPC (in 1/sec)
+    """
     no_force = 30.0
     force = 200.0
     rate_row = [no_force, force]
@@ -463,10 +591,17 @@ def get_fraction_complex_NPC_traverse_per_sec(MW, is_force):
     return rate[MW][i_force]
 
 
-def get_compartment_nmol_stats(ts,
-                               stats,
-                               compartment,
-                               labels=['L', 'U']):
+def get_compartment_nmol_stats(ts: transport_simulation.TransportSimulation, stats: dict, compartment: str,
+                               labels: list = ['L', 'U']):
+    """
+
+    :param ts: the transport simulation that the stats are from
+    :param stats:
+    :param compartment: the area to get the stats for (e.g. nucleus, cytoplasm, or NPC)
+    :param labels: the list of types of cargo to include (labeled and/or unlabeled)
+    :return:
+    """
+    import pdb; pdb.set_trace()
     assert (compartment in ['N', 'C', 'NPC'])
     nframes = len(stats['time_sec'])
     nmol_stats = np.zeros(nframes)
@@ -474,9 +609,7 @@ def get_compartment_nmol_stats(ts,
         for label in labels:
             for side in ['N', 'C']:
                 for source in ['import', 'export']:
-                    tag = 'complex{}_NPC_{}_{}'.format(label,
-                                                       side,
-                                                       source)
+                    tag = 'complex{}_NPC_{}_{}'.format(label, side, source)
                     nmol_stats = nmol_stats + stats[tag]
     else:
         for state in ['free', 'complex']:
@@ -488,10 +621,17 @@ def get_compartment_nmol_stats(ts,
     return nmol_stats
 
 
-def get_compartment_concentration_stats(ts,
-                                        stats,
-                                        compartment,
-                                        labels=['L', 'U']):
+def get_compartment_concentration_stats(ts: transport_simulation.TransportSimulation, stats, compartment: str,
+                                        labels: list = ['L', 'U']):
+    """
+
+    :param ts:
+    :param stats:
+    :param compartment: the area to get the stats for (e.g. nucleus, cytoplasm, or NPC)
+    :param labels: the list of types of cargo to include (labeled and/or unlabeled)
+    :return: the molar concentration of cargo in a given compartment (in M)
+    """
+    import pdb; pdb.set_trace()
     assert (compartment in ['N', 'C'])
     nmol_stats = get_compartment_nmol_stats(ts,
                                             stats,
@@ -502,9 +642,14 @@ def get_compartment_concentration_stats(ts,
     return (nmol_stats / transport_simulation.N_A) / volume_L
 
 
-def get_N_C_ratio_stats(ts,
-                        stats,
-                        labels=['L', 'U']):
+def get_N_C_ratio_stats(ts: transport_simulation.TransportSimulation, stats, labels: list = ['L', 'U']):
+    """
+
+    :param ts:
+    :param stats:
+    :param labels: the list of types of cargo to include (labeled and/or unlabeled)
+    :return:
+    """
     EPSILON = 1E-12
     c_N_stats = get_compartment_concentration_stats(ts,
                                                     stats,
@@ -512,14 +657,34 @@ def get_N_C_ratio_stats(ts,
     c_C_stats = get_compartment_concentration_stats(ts,
                                                     stats,
                                                     'C')
+    x = map_param_grid.get_N_to_C_ratios_for_ts(stats, ts)
+    import pdb; pdb.set_trace()
+    print(x == c_N_stats / c_C_stats)
     return c_N_stats / c_C_stats
 
 
-def do_simulate(ts, simulation_time_sec):
+def do_simulate(ts: transport_simulation.TransportSimulation, simulation_time_sec: float):
+    """
+    Simulate the transport simulation for certain amount of time
+
+    :param ts: the transport simulation instance
+    :param simulation_time_sec: time interval (in seconds) for which the simulation is run
+    :return: dictionary with that contain the values for each species at each time frame
+    """
     return ts.simulate(simulation_time_sec)
 
 
-def get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors, is_change_cell_volume=False):
+def get_MW_stats_list_by_force(MW: int, simulation_time_sec: float, n_processors: int,
+                               is_change_cell_volume: bool = False):
+    """
+
+
+    :param MW: molecular weight of the cargo (in kDa)
+    :param simulation_time_sec: time interval (in seconds) for which the simulation is run
+    :param n_processors: number of CPUs to use for multiprocessing
+    :param is_change_cell_volume: whether the cell volume changes when force is applied
+    """
+    import pdb; pdb.set_trace()
     assert (MW in [27, 41, 54, 67])
     stats_list_by_force = {}
     TSs_by_force = {}
@@ -538,7 +703,13 @@ def get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors, is_change_
     return stats_list_by_force, TSs_by_force
 
 
-def plot_MW_stats_list(stats_list_by_force, TSs_by_force):
+def plot_MW_stats_list(stats_list_by_force, TSs_by_force) -> None:
+    """
+
+    :param stats_list_by_force:
+    :param TSs_by_force:
+    :return: None
+    """
     plot_from_sec = 0.1  # ts.bleach_start_time_sec + 1.0
     extras = [  #'GTP_N',
         #'GDP_N',
@@ -661,6 +832,7 @@ if __name__ == '__main__':
 
     #  CELL 11:
     # RUN:
+    """
     sim_time_sec = 50.0
     sim_flags = {}  #rate_free_to_complex_per_sec=1.0,
     #max_passive_diffusion_rate_nmol_per_sec_per_M=2e7)
@@ -944,35 +1116,12 @@ if __name__ == '__main__':
 
     ## Run 03 on cluster (~/raveh_lab/Projects/npctransport_kinetics/run03/)
 
-
+    """
     #  CELL 38:
     importlib.reload(map_param_grid)
 
     with open("run03/run03.pkl", "rb") as F:
         stats_grids_by_passive, ts_by_passive, param_range = pickle.load(F)
-    param_range = {'tag_x': 'fraction_complex_NPC_traverse_per_sec',
-                   'range_x': np.array([1., 1.24093776, 1.53992653, 1.91095297,
-                                        2.37137371, 2.94272718, 3.65174127, 4.53158364,
-                                        5.62341325, 6.97830585, 8.65964323, 10.74607828,
-                                        13.33521432, 16.548171, 20.53525026, 25.48296748,
-                                        31.6227766, 39.24189758, 48.69675252, 60.42963902,
-                                        74.98942093, 93.05720409, 115.47819847, 143.30125702,
-                                        177.827941, 220.67340691, 273.84196343, 339.82083289,
-                                        421.69650343, 523.29911468, 649.38163158, 805.84218776,
-                                        1000.]),
-                   'pretty_x':
-                       'rate NPC traverse [$sec^{-1}$]',
-                   'tag_y': 'rate_free_to_complex_per_sec',
-                   'range_y': np.array([1.00000000e-03, 1.30494682e-03, 1.70288620e-03, 2.22217592e-03,
-                                        2.89982140e-03, 3.78411271e-03, 4.93806584e-03, 6.44391330e-03,
-                                        8.40896415e-03, 1.09732510e-02, 1.43195090e-02, 1.86861977e-02,
-                                        2.43844942e-02, 3.18204681e-02, 4.15240186e-02, 5.41866359e-02,
-                                        7.07106781e-02, 9.22736744e-02, 1.20412238e-01, 1.57131566e-01,
-                                        2.05048338e-01, 2.67577176e-01, 3.49173984e-01, 4.55653479e-01,
-                                        5.94603558e-01, 7.75926020e-01, 1.01254219e+00, 1.32131371e+00,
-                                        1.72424412e+00, 2.25004688e+00, 2.93619151e+00, 3.83157377e+00,
-                                        5.00000000e+00]),
-                   'pretty_y': 'NTR $k_{on}$ [$sec^{-1}$]'}
 
     print([f'{state}{label}_N' for state in ['free', 'complex'] for label in ['L', 'U']])
     print(stats_grids_by_passive.keys())
@@ -1031,6 +1180,7 @@ if __name__ == '__main__':
 
 
     #  CELL 43:
+    """
     plt.style.use('./my.mplstyle.txt')
     NLSs = df['passive_rate'].unique()[:]
     ncol = 3
@@ -1040,8 +1190,10 @@ if __name__ == '__main__':
     import pdb; pdb.set_trace()
     for NLS in NLSs:
         ax = next(axes_iter)
-        is_NLS = np.isclose(df['rate_free_to_complex_per_sec'], NLS)
+        is_NLS = np.isclose(df['passive_rate'], NLS)
         N2C = df[is_NLS].pivot(index='passive_rate', columns='fraction_complex_NPC_traverse_per_sec', values='N2C')
+        if N2C.empty:
+            continue
         NC_min = 1.0
         NC_max = 10.0
         plt.sca(ax)
@@ -1070,6 +1222,7 @@ if __name__ == '__main__':
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
     print("End of cell 43")
     plt.show()
+    """
 
 
     #  CELL 44:
@@ -1676,6 +1829,7 @@ if __name__ == '__main__':
 
 
     #  CELL 67:
+    """
     keys = sorted(stats_grids_traverse_by_passive_force.keys())
     for key in keys:
         print(f"passive rate {key}")
@@ -1683,6 +1837,7 @@ if __name__ == '__main__':
                          vmax_import_export=10.0, NC_max=30.0, NC_min=1.0)
 
     # Map NLS strength, MW size, force
+    """
 
 
     #  CELL 69:
@@ -1727,7 +1882,8 @@ if __name__ == '__main__':
     MW_to_stats_list_by_force = {}
     for MW in [27, 41, 54, 67]:
         print(MW)
-        MW_to_stats_list_by_force[MW] = get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors=n_processors)
+        MW_to_stats_list_by_force[MW] = get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors=n_processors,
+                                                                   is_change_cell_volume=True)
         plot_MW_stats_list(*MW_to_stats_list_by_force[MW])
     print("End of cell 77")
     plt.show()
@@ -1735,5 +1891,5 @@ if __name__ == '__main__':
 
 
     #  CELL 79:
-    with open("MW_to_stats_list_by_force.p", "wb") as F:
+    with open("MW_to_stats_list_by_force.pkl", "wb") as F:
         pickle.dump(MW_to_stats_list_by_force, F)

@@ -66,7 +66,7 @@ def parse_args():
 def get_param_range_traverse_kon(nx: int, ny: int, npc_traverse_range: tuple = (1.0, 1000.0),
                                  k_on_range: tuple = (0.01, 10.0)) -> dict:
     """
-    Obtains the specific of NPC traverse rate values and free-to-complex rate values to iterate over
+    Obtains the specific NPC traverse rate values and free-to-complex rate values to iterate over
     :param nx: number of values used to discretize npc_traverse_range
     :param ny: number of values used to discretize k_on_range
     :param npc_traverse_range: tuple of the min and max values for the NPC traverse rate range
