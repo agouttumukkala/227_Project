@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument("-np", "--n-passive", type=int, default=10,
                         help="the number of values in the range --passive-range to run")
     parser.add_argument("-p", "--passive-range", metavar=("MIN_PASSIVE", "MAX_PASSIVE"),
-                        help="The range of values for passive_nuclear_molar_rate_per_sec",
+                        help="The range of values for passive_diffusion_molar_rate_per_sec",
                         type=float, nargs=2, default=(0.01, 0.1))
     parser.add_argument("-n", "--npc-traverse-range", metavar=("MIN_RATE", "MAX_RATE"),
                         help="The range of values for fraction_complex_NPC_traverse_per_sec in log scale",
@@ -66,7 +66,8 @@ def parse_args():
 def get_param_range_traverse_kon(nx: int, ny: int, npc_traverse_range: tuple = (1.0, 1000.0),
                                  k_on_range: tuple = (0.01, 10.0)) -> dict:
     """
-    Obtains the specific NPC traverse rate values and free-to-complex rate values to iterate over
+    Obtains the specific NPC traverse rate values (facilitated diffusion) and free-to-complex rate values
+    (given by NLS strength) to iterate over
     :param nx: number of values used to discretize npc_traverse_range
     :param ny: number of values used to discretize k_on_range
     :param npc_traverse_range: tuple of the min and max values for the NPC traverse rate range
@@ -86,28 +87,24 @@ def get_param_range_traverse_kon(nx: int, ny: int, npc_traverse_range: tuple = (
     return param_range
 
 
-def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
-                                        Ran_cell_M: float = 20.0e-6,
-                                        v_N_L: float = 627e-15,
-                                        v_C_L: float = 2194e-15,
+def get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec: float, Ran_cell_M: float = 20.0e-6,
+                                        v_N_L: float = 627e-15, v_C_L: float = 2194e-15,
                                         **kwargs) -> transport_simulation.TransportSimulation:
     """
-    Generates a transport simulation of passive cargo transport
+    Generates a transport simulation given a specific cargo passive diffusion rate and Ran concentration
 
-    :param passive_nuclear_molar_rate_per_sec: rate of diffusion (passive transport) of cargo across the nuclear
+    :param passive_diffusion_molar_rate_per_sec: rate of diffusion (passive transport) of cargo across the nuclear
                                                envelope (in 1/(second*M))
     :param Ran_cell_M: total Ran concentration in the nucleus and cytoplasm combined (in M)
     :param v_N_L: nucleus volume in liters
     :param v_C_L: cytoplasm volume in liters
     :return: resulting transport simulation for the parameter values and arguments given
     """
-    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L,
-                                                  v_C_L=v_C_L)
+    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L, v_C_L=v_C_L)
     ts.set_time_step(0.1e-3)
-    ts.set_NPC_dock_sites(n_NPCs=2000,
-                          n_dock_sites_per_NPC=500)
-    ts.set_passive_nuclear_molar_rate_per_sec(
-        passive_nuclear_molar_rate_per_sec)  # get_passive_export_rate_per_sec(27,1))
+    ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
+    ts.set_passive_diffusion_molar_rate_per_sec(
+        passive_diffusion_molar_rate_per_sec)  # get_passive_export_rate_per_sec(27,1))
     ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 1.0e+6  # TODO: this is doubled relative to complex_N to free_N
     ts.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 1.0e+6
     ts.rate_complex_to_NPC_per_free_site_per_sec_per_M = 50e+6
@@ -124,17 +121,12 @@ def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec,
     ts.set_params(**kwargs)  # override defaults
     ts.set_RAN_distribution(Ran_cell_M=Ran_cell_M,
                             # total physiological concentration of Ran # TODO: check in the literature
-                            parts_GTP_N=1000,
-                            parts_GTP_C=1,
-                            parts_GDP_N=1,
-                            parts_GDP_C=1000)
+                            parts_GTP_N=1000, parts_GTP_C=1, parts_GDP_N=1, parts_GDP_C=1000)
     return ts
 
 
 def plot_stats_grids(stats_grids: dict, transport_simulation: transport_simulation.TransportSimulation,
-                     param_range: dict,
-                     NC_min: float = 1.0,
-                     NC_max: float = 20.0,
+                     param_range: dict, NC_min: float = 1.0, NC_max: float = 20.0,
                      vmax_import_export: float = 10.0) -> None:
     """
     Creates different contour plots (e.g. N/C ratio, bound fraction for nucleus and cytoplasm,
@@ -153,50 +145,34 @@ def plot_stats_grids(stats_grids: dict, transport_simulation: transport_simulati
     fig, axes = plt.subplots(3, 3, figsize=(14, 10), sharex=True, sharey=True)
     # N/C
     plt.sca(axes[0, 0])
-    map_param_grid.plot_NC_ratios(param_range,
-                                  stats_grids,
-                                  transport_simulation,
-                                  vmin=NC_min,
-                                  vmax=NC_max,
+    map_param_grid.plot_NC_ratios(param_range, stats_grids, transport_simulation, vmin=NC_min, vmax=NC_max,
                                   #                                  levels= np.linspace(NC_min, NC_max, 21)
                                   levels=np.logspace(np.log2(NC_min), np.log2(NC_max), 21, base=2.0),
-                                  locator=mpl.ticker.LogLocator(base=2.0)
-                                  )
+                                  locator=mpl.ticker.LogLocator(base=2.0))
     # Bound fraction
-    map_param_grid.plot_bound_fraction(param_range, stats_grids,
-                                       'N', ax=axes[0, 1])
-    map_param_grid.plot_bound_fraction(param_range, stats_grids,
-                                       'C', ax=axes[0, 2])
+    map_param_grid.plot_bound_fraction(param_range, stats_grids, 'N', ax=axes[0, 1])
+    map_param_grid.plot_bound_fraction(param_range, stats_grids, 'C', ax=axes[0, 2])
     # Nuclear import/export rates
     import_export_locator = mpl.ticker.LogLocator(subs=[1.0, 5.0])
-    map_param_grid.plot_import_export(param_range,
-                                      stats_grids,
-                                      axes=[axes[1, 0], axes[1, 1]],
+    map_param_grid.plot_import_export(param_range, stats_grids, axes=[axes[1, 0], axes[1, 1]],
                                       # vmin=0.01,
                                       # vmax=vmax_import_export,
                                       # #                    levels=np.linspace(0.0,vmax_import_export,20),
                                       # levels=np.logspace(np.log10(1e-2), np.log10(vmax_import_export), 21),
-                                      locator=import_export_locator,
-                                      extend='both')
+                                      locator=import_export_locator, extend='both')
     # import/export ratio
     plt.sca(axes[1, 2])
     ratios_import_export = map_param_grid.get_import_export_ratios(stats_grids)
-    map_param_grid.plot_param_grid(param_range,
-                                   ratios_import_export,
-                                   Z_label='import:export',
+    map_param_grid.plot_param_grid(param_range, ratios_import_export, Z_label='import:export',
                                    # vmin=NC_min,
                                    # vmax=NC_max,
                                    # #                   levels= np.linspace(NC_min, NC_max, 21)
                                    # levels=np.logspace(np.log2(NC_min), np.log2(NC_max), 21, base=2.0),
-                                   locator=mpl.ticker.LogLocator(base=2.0),
-                                   extend='both'
-                                   )
+                                   locator=mpl.ticker.LogLocator(base=2.0), extend='both')
     # nuclear GTP: cytoplasmic GTP
     plt.sca(axes[2, 0])
     GTP_ratio = stats_grids['GTP_N'] / stats_grids['GTP_C']
-    map_param_grid.plot_param_grid(param_range,
-                                   GTP_ratio,
-                                   Z_label="GTP N:C",
+    map_param_grid.plot_param_grid(param_range, GTP_ratio, Z_label="GTP N:C",
                                    # vmin=0.0,
                                    # vmax=2000.0,
                                    # levels=np.linspace(0, 2000, 21),
@@ -234,26 +210,16 @@ def transport_simulation_generator(passive: float, Ran_cell_M: float, c_M: float
     :return: resulting transport simulation based on values and arguments given
     """
     print(f"Ran: {Ran_cell_M:.6f} M")
-    return get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec=passive,
+    return get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec=passive,
                                                Ran_cell_M=Ran_cell_M,
                                                init_cargo_cytoplasm_M=c_M,
                                                **kwargs)
 
 
-def get_stats_on_grid(output: str,
-                      passive_range: tuple,
-                      npc_traverse_range: tuple,
-                      k_on_range: tuple,
-                      nx: int = 20,
-                      ny: int = 20,
-                      n_passive=10,
-                      cargo_concentration_M: float = 50e-6,
-                      Ran_concentration_M: float = 20e-6,
-                      v_N_L: float = 627e-15,
-                      v_C_L: float = 2194e-15,
-                      equilibration_time_sec: float = 100.0,
-                      pickle_file: str = None
-                      ) -> None:
+def get_stats_on_grid(output: str, passive_range: tuple, npc_traverse_range: tuple, k_on_range: tuple, nx: int = 20,
+                      ny: int = 20, n_passive=10, cargo_concentration_M: float = 50e-6,
+                      Ran_concentration_M: float = 20e-6, v_N_L: float = 627e-15, v_C_L: float = 2194e-15,
+                      equilibration_time_sec: float = 100.0, pickle_file: str = None) -> None:
     """
 
     :param output: an identifier for this set of simulations (used to name the png file of graphs)

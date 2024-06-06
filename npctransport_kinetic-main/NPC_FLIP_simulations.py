@@ -41,7 +41,8 @@ def plot_simulation_attributes(stats, attributes_list, log: bool = True):
     """
 
 
-    :param stats:
+    :param stats: a dictionary of simulation properties with their values calculated at each time frame of the
+                  simulation
     :param attributes_list:
     :param log:
     """
@@ -81,7 +82,7 @@ def get_ts_time_series(dt_sec: float, **kwargs) -> transport_simulation.Transpor
     ts.bleach_start_time_sec = 400.0
     ts.set_time_step(dt_sec)
     ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
-    ts.set_passive_nuclear_molar_rate_per_sec(0.02)
+    ts.set_passive_diffusion_molar_rate_per_sec(0.02)
     ts.set_params(fraction_complex_NPC_traverse_per_sec=100, rate_free_to_complex_per_sec=0.05)
     ts.bleach_volume_L_per_sec = 100.0e-15
     #ts.rate_complex_to_NPC_per_free_site_per_sec_per_M= 1.0e+6
@@ -91,12 +92,12 @@ def get_ts_time_series(dt_sec: float, **kwargs) -> transport_simulation.Transpor
     return ts
 
 
-def get_ts_time_series_2(passive_nuclear_molar_rate_per_sec: float, is_force: bool,
+def get_ts_time_series_2(passive_diffusion_molar_rate_per_sec: float, is_force: bool,
                          **kwargs) -> transport_simulation.TransportSimulation:
     """
 
 
-    :param passive_nuclear_molar_rate_per_sec: the max rate of passive diffusion in 1/(second*M)
+    :param passive_diffusion_molar_rate_per_sec: the max rate of passive diffusion in 1/(second*M)
     :param is_force: whether the cell nucleus is experiencing force (cell volumes increase)
     :param kwargs: transport simulation parameters and their desired values
     :return: transport simulation with the appropriate parameters
@@ -105,8 +106,8 @@ def get_ts_time_series_2(passive_nuclear_molar_rate_per_sec: float, is_force: bo
     ts = transport_simulation.TransportSimulation(v_N_L=v_N_L, v_C_L=v_C_L)
     ts.set_time_step(1.0e-3)
     ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
-    ts.set_passive_nuclear_molar_rate_per_sec(
-        passive_nuclear_molar_rate_per_sec)  #get_passive_export_rate_per_sec(27,1))
+    ts.set_passive_diffusion_molar_rate_per_sec(
+        passive_diffusion_molar_rate_per_sec)  #get_passive_export_rate_per_sec(27,1))
     ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 10.0e+6  # TODO: this is doubled relative to complex_N to free_N
     ts.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 10.0e+6
     ts.rate_complex_to_NPC_per_free_site_per_sec_per_M = 50.0e+6
@@ -124,12 +125,12 @@ def get_ts_time_series_2(passive_nuclear_molar_rate_per_sec: float, is_force: bo
     return ts
 
 
-def get_ts_time_series_3(passive_nuclear_molar_rate_per_sec: float, is_force: bool, dt_sec: float = 0.3e-3,
+def get_ts_time_series_3(passive_diffusion_molar_rate_per_sec: float, is_force: bool, dt_sec: float = 0.3e-3,
                          **kwargs) -> transport_simulation.TransportSimulation:
     """
 
 
-    :param passive_nuclear_molar_rate_per_sec: the max rate of passive diffusion in 1/(second*M)
+    :param passive_diffusion_molar_rate_per_sec: the max rate of passive diffusion in 1/(second*M)
     :param is_force: whether the cell nucleus is experiencing force (cell volumes increase)
     :param dt_sec: time step for the simulation (in seconds)
     :param kwargs: transport simulation parameters and their desired values
@@ -139,8 +140,8 @@ def get_ts_time_series_3(passive_nuclear_molar_rate_per_sec: float, is_force: bo
     ts = transport_simulation.TransportSimulation(v_N_L=v_N_L, v_C_L=v_C_L)
     ts.set_time_step(dt_sec)
     ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
-    ts.set_passive_nuclear_molar_rate_per_sec(
-        passive_nuclear_molar_rate_per_sec)  #get_passive_export_rate_per_sec(27,1))
+    ts.set_passive_diffusion_molar_rate_per_sec(
+        passive_diffusion_molar_rate_per_sec)  #get_passive_export_rate_per_sec(27,1))
     ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 1.0e+6  # TODO: this is doubled relative to complex_N to free_N
     ts.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 1.0e+6
     ts.rate_complex_to_NPC_per_free_site_per_sec_per_M = 50e+6
@@ -209,43 +210,21 @@ def get_param_range_traverse_kon(nx: int, ny: int) -> dict:
     return stats_grid.get_param_range_traverse_kon(nx, ny, npc_traverse_range=(1, 1000), k_on_range=(0.01, 10))
 
 
-def get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec: float, is_force_volume: bool, Ran_cell_M: float = 20.0e-6,
+def get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec: float, is_force_volume: bool, Ran_cell_M: float = 20.0e-6,
                                         **kwargs):
     """
+    Generates a transport simulation given a specific cargo passive diffusion rate and Ran concentration
 
-
-    :param passive_nuclear_molar_rate_per_sec: the max rate of passive diffusion in 1/(second*M)
+    :param passive_diffusion_molar_rate_per_sec: the max rate of passive diffusion in 1/(second*M)
     :param is_force_volume: whether to use the volumes for when the cell nucleus is experiencing force
     :param Ran_cell_M: total Ran concentration in the nucleus and cytoplasm combined (in M)
     :param kwargs: transport simulation parameters and their desired values
     :return: transport simulation with the appropriate parameters
     """
+
     v_N_L, v_C_L = (762e-15, 4768e-15) if is_force_volume else (627e-15, 2194e-15)
-    ts = transport_simulation.TransportSimulation(v_N_L=v_N_L, v_C_L=v_C_L)
-    ts.set_time_step(0.1e-3)
-    ts.set_NPC_dock_sites(n_NPCs=2000, n_dock_sites_per_NPC=500)
-    ts.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 1.0e+6  # TODO: this is doubled relative to complex_N to free_N
-    ts.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 1.0e+6
-    ts.set_passive_nuclear_molar_rate_per_sec(
-        passive_nuclear_molar_rate_per_sec)  #get_passive_export_rate_per_sec(27,1))
-    ts.rate_complex_to_NPC_per_free_site_per_sec_per_M = 50e+6
-    ts.fraction_complex_NPC_to_complex_N_C_per_sec = 3000.0  # Leakage parameter
-    ts.rate_GDP_N_to_GTP_N_per_sec = 1000.0
-    ts.rate_GTP_N_to_GDP_N_per_sec = 0.2
-    ts.rate_GTP_C_to_GDP_C_per_sec = 500.0
-    ts.rate_GTP_N_to_GTP_C_per_sec = 0.5
-    ts.rate_GDP_C_to_GDP_N_per_sec = 1.0
-    ts.rate_GDP_N_to_GDP_C_per_sec = 1.0
-    ts.rate_complex_to_free_per_sec = 0.05
-    ts.rate_free_to_complex_per_sec = 0.01  # SCAN
-    ts.fraction_complex_NPC_traverse_per_sec = 4000  # SCAN
-    ts.set_params(**kwargs)  # override defaults
-    ts.set_RAN_distribution(Ran_cell_M=Ran_cell_M,
-                            # total physiological concentration of Ran # TODO: check in the literature
-                            parts_GTP_N=1000,
-                            parts_GTP_C=1,
-                            parts_GDP_N=1,
-                            parts_GDP_C=1000)
+    ts = stats_grid.get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec, v_N_L=v_N_L, v_C_L=v_C_L,
+                                                        Ran_cell_M=Ran_cell_M, **kwargs)
     return ts
 
 
@@ -265,7 +244,7 @@ def plot_stats_grids(stats_grids, transport_simulation, NC_min=1.0, NC_max=20.0,
     stats_grid.plot_stats_grids(stats_grids, transport_simulation, param_range, NC_min, NC_max, vmax_import_export)
 
 
-def get_passive_nuclear_molar_rate_per_sec(MW: int, is_force: bool) -> float:  # TODO: verify it corresponds to multiplyng by concentration rather than nmolecules
+def get_passive_diffusion_molar_rate_per_sec(MW: int, is_force: bool) -> float:  # TODO: verify it corresponds to multiplyng by concentration rather than nmolecules
     """
     Obtains the maximum passive rate of nuclear diffusion given a cargo's molecular weight and whether the nucleus is
     experiencing force
@@ -274,7 +253,6 @@ def get_passive_nuclear_molar_rate_per_sec(MW: int, is_force: bool) -> float:  #
     :param is_force: whether the cell nucleus is experiencing force
     :return: the max rate of passive diffusion in 1/(second*M)
     """
-    import pdb; pdb.set_trace()
     base_rates = {27: 0.0805618,
                   41: 0.06022355,
                   54: 0.03301662,
@@ -301,7 +279,7 @@ def get_force_effect_on_diffusion(MW: int) -> float:
 
 
 def my_plot_param_grid(df: pandas.DataFrame,  # a pivoted 2D dataframe
-                       pretty_x=None, pretty_y=None, pretty_z=None, is_colorbar=False, **contourf_kwargs):
+                       pretty_x=None, pretty_y=None, pretty_z=None, is_colorbar: bool = False, **contourf_kwargs):
     """
 
 
@@ -332,11 +310,11 @@ def my_plot_param_grid(df: pandas.DataFrame,  # a pivoted 2D dataframe
     return ctr
 
 
-def transform_N2C_to_N_relative(N2C, N2C_vol):
+def transform_N2C_to_N_relative(N2C: np.float64, N2C_vol: float) -> np.float64:
     """
 
     :param N2C:
-    :param N2C_vol:
+    :param N2C_vol: the ratio of nuclear vol to cytoplasmic volume (v_N_L / v_C_L)
     :return:
     """
     import pdb; pdb.set_trace()
@@ -350,7 +328,7 @@ def plot_dX_dY_Z(df: pandas.DataFrame, is_transform: bool = False, N2C_vol: floa
 
     :param df:
     :param is_transform:
-    :param N2C_vol:
+    :param N2C_vol: the ratio of nuclear vol to cytoplasmic volume (v_N_L / v_C_L)
     :return: None
     """
     NLSs = df['rate_free_to_complex_per_sec'].unique()
@@ -423,8 +401,8 @@ def plot_dX_dY_Z(df: pandas.DataFrame, is_transform: bool = False, N2C_vol: floa
             colors = ['r', 'g', 'b', 'k']
             ylim = ax.get_ylim()
             for MW, color in zip(MWs, colors):
-                y0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-                y1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+                y0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+                y1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
                 y1 = min(y1, ylim[1] * 0.99)
                 x0 = N2C.columns[0]
                 x1 = N2C.columns[-1]
@@ -436,13 +414,12 @@ def plot_dX_dY_Z(df: pandas.DataFrame, is_transform: bool = False, N2C_vol: floa
     plt.tight_layout()
 
 
-def plot_cells(
-        cells_column: str = 'fraction_complex_NPC_traverse_per_sec',
-        pretty_cell: str = "rate NPC traverse {:.1f} $sec^{{-1}}$",
-        x_column: str = 'passive_rate',
-        pretty_x: str = r'passive rate [$sec^{-1}$]',
-        y_column: str = 'rate_free_to_complex_per_sec',
-        pretty_y: str = r'NLS $k_{on}$ [$sec^{-1}$]') -> None:
+def plot_cells(cells_column: str = 'fraction_complex_NPC_traverse_per_sec',
+               pretty_cell: str = "rate NPC traverse {:.1f} $sec^{{-1}}$",
+               x_column: str = 'passive_rate',
+               pretty_x: str = r'passive rate [$sec^{-1}$]',
+               y_column: str = 'rate_free_to_complex_per_sec',
+               pretty_y: str = r'NLS $k_{on}$ [$sec^{-1}$]') -> None:
     """
 
 
@@ -480,8 +457,8 @@ def plot_cells(
         if x_column == "passive_rate":
             xlim = ax.get_xlim()
             for MW, color in zip(MWs, colors):
-                x0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-                x1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+                x0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+                x1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
                 x1 = min(x1, xlim[1] * 0.99)
                 y0 = N2C.index[0]
                 y1 = N2C.index[-1]
@@ -500,15 +477,17 @@ def plot_cells(
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
 
 
-def get_dLogRatios_by_passive(stats_grids_by_passive, ts_by_passive) -> dict:
+def get_dLogRatios_by_passive(stats_grids_by_passive: dict, ts_by_passive: dict) -> dict:
     """
+    Creates a dictionary of the log of the NC ratios between a simulation with a certain passive diffusion rate and the
+    simulation with the next highest passive diffusion rate
 
-
-    :param stats_grids_by_passive:
-    :param ts_by_passive:
-    :return:
+    :param stats_grids_by_passive: dictionary of stats_grid dictionaries for a series of simulations with different
+                                   passive diffusion params
+    :param ts_by_passive: dictionary of transport simulation that correspond to each simulation used for
+                          stats_grids_by_passive
+    :return: dictionary of log of the NC ratios with the keys being the passive rates
     """
-    import pdb; pdb.set_trace()
     dRatios_by_passive = {}
     keys = sorted(stats_grids_by_passive.keys())
     for key0, key1 in zip(keys[:-1], keys[1:]):
@@ -527,7 +506,9 @@ def get_dLogRatios_by_passive(stats_grids_by_passive, ts_by_passive) -> dict:
 def get_ts_with_parameters(MW: int = 27, NLS_strength: int = 0, is_force: bool = False,
                            is_change_cell_volume: bool = False, **kwargs) -> transport_simulation.TransportSimulation:
     """
-    Creates a
+    Creates a transport simulation with the passive cargo diffusion rate, the complex NPC traversal rate
+    (facilitated diffusion), and the free-to-complex rate determined by the cargo molecular weight, the NLS strength,
+    and whether the nucleus is experiencing force (whether the cell is on a soft or stiff substrate)
 
     :param MW: molecular weight of the cargo molecule (in kDa)
     :param NLS_strength: relative strength of the nuclear localization signal
@@ -551,8 +532,7 @@ def get_ts_with_parameters(MW: int = 27, NLS_strength: int = 0, is_force: bool =
     ts.rate_GDP_N_to_GDP_C_per_sec = 1.0
     ts.rate_complex_to_free_per_sec = 0.05
     #
-    ts.set_passive_nuclear_molar_rate_per_sec(
-        get_passive_nuclear_molar_rate_per_sec(MW, is_force))
+    ts.set_passive_diffusion_molar_rate_per_sec(get_passive_diffusion_molar_rate_per_sec(MW, is_force))
     ts.rate_free_to_complex_per_sec = get_free_to_complex_rate(NLS_strength)
     ts.fraction_complex_NPC_traverse_per_sec = get_fraction_complex_NPC_traverse_per_sec(MW, is_force)
     #
@@ -572,8 +552,8 @@ def get_free_to_complex_rate(NLS_strength: int) -> float:
 
 def get_fraction_complex_NPC_traverse_per_sec(MW: int, is_force: bool) -> float:
     """
-    Calculates the fraction of complexes that go from one side of the NPC to the other per sec given the molecular
-    weight of the cargo and whether a force is being applied
+    Calculates the fraction of complexes that go from one side of the NPC to the other per sec (facilitated diffusion)
+    given the molecular weight of the cargo and whether a force is being applied
 
     :param MW: molecular weight of the cargo molecule (in kDa)
     :param is_force: whether the cell nucleus is experiencing force
@@ -592,17 +572,18 @@ def get_fraction_complex_NPC_traverse_per_sec(MW: int, is_force: bool) -> float:
 
 
 def get_compartment_nmol_stats(ts: transport_simulation.TransportSimulation, stats: dict, compartment: str,
-                               labels: list = ['L', 'U']):
+                               labels: list = ['L', 'U']) -> np.ndarray:
     """
+    Calculates the number of cargo molecules in a certain compartment at each time frame of a simulation
 
-    :param ts: the transport simulation that the stats are from
-    :param stats:
+    :param ts: transport simulation used to obtain the stats
+    :param stats: a dictionary of simulation properties with their values calculated at each time frame of the
+                  simulation
     :param compartment: the area to get the stats for (e.g. nucleus, cytoplasm, or NPC)
     :param labels: the list of types of cargo to include (labeled and/or unlabeled)
-    :return:
+    :return: a numpy array containing the number of cargo molecules in the given compartment at each time frame
     """
-    import pdb; pdb.set_trace()
-    assert (compartment in ['N', 'C', 'NPC'])
+    assert compartment in ['N', 'C', 'NPC']
     nframes = len(stats['time_sec'])
     nmol_stats = np.zeros(nframes)
     if compartment == 'NPC':
@@ -614,52 +595,45 @@ def get_compartment_nmol_stats(ts: transport_simulation.TransportSimulation, sta
     else:
         for state in ['free', 'complex']:
             for label in labels:
-                tag = '{}{}_{}'.format(state,
-                                       label,
-                                       compartment)
+                tag = '{}{}_{}'.format(state, label, compartment)
                 nmol_stats = nmol_stats + stats[tag]
     return nmol_stats
 
 
-def get_compartment_concentration_stats(ts: transport_simulation.TransportSimulation, stats, compartment: str,
-                                        labels: list = ['L', 'U']):
+def get_compartment_concentration_stats(ts: transport_simulation.TransportSimulation, stats: dict, compartment: str,
+                                        labels: list = ['L', 'U']) -> np.ndarray:
     """
+    Calculates the concentration of cargo within a given compartment (e.g. nucleus or cytoplasm) at each time frame for
+    a particular transport simulation
 
-    :param ts:
-    :param stats:
+    :param ts: transport simulation used to obtain the stats (used to obtain nuclear and cytoplasmic volumes and N_A)
+    :param stats: a dictionary of simulation properties with their values calculated at each time frame of the
+                  simulation
     :param compartment: the area to get the stats for (e.g. nucleus, cytoplasm, or NPC)
     :param labels: the list of types of cargo to include (labeled and/or unlabeled)
     :return: the molar concentration of cargo in a given compartment (in M)
     """
-    import pdb; pdb.set_trace()
-    assert (compartment in ['N', 'C'])
-    nmol_stats = get_compartment_nmol_stats(ts,
-                                            stats,
-                                            compartment,
-                                            labels)
+    assert compartment in ['N', 'C']
+    nmol_stats = get_compartment_nmol_stats(ts, stats, compartment, labels)
     is_nuclear = (compartment == 'N')
-    volume_L = (ts.get_v_N_L() if is_nuclear else ts.get_v_C_L())
+    volume_L = ts.get_v_N_L() if is_nuclear else ts.get_v_C_L()
     return (nmol_stats / transport_simulation.N_A) / volume_L
 
 
 def get_N_C_ratio_stats(ts: transport_simulation.TransportSimulation, stats, labels: list = ['L', 'U']):
     """
+    Calculates the ratio of nuclear cargo concentration to cytoplasmic cargo concentration at every time frame for a
+    transport simulation
 
-    :param ts:
-    :param stats:
+    :param ts: transport simulation used to obtain the stats (used to obtain nuclear and cytoplasmic volumes and N_A)
+    :param stats: a dictionary of simulation properties with their values calculated at each time frame of the
+                  simulation
     :param labels: the list of types of cargo to include (labeled and/or unlabeled)
-    :return:
+    :return: numpy array of NC concentration ratios at each time frame
     """
     EPSILON = 1E-12
-    c_N_stats = get_compartment_concentration_stats(ts,
-                                                    stats,
-                                                    'N')
-    c_C_stats = get_compartment_concentration_stats(ts,
-                                                    stats,
-                                                    'C')
-    x = map_param_grid.get_N_to_C_ratios_for_ts(stats, ts)
-    import pdb; pdb.set_trace()
-    print(x == c_N_stats / c_C_stats)
+    c_N_stats = get_compartment_concentration_stats(ts, stats, 'N')
+    c_C_stats = get_compartment_concentration_stats(ts, stats, 'C')
     return c_N_stats / c_C_stats
 
 
@@ -675,17 +649,20 @@ def do_simulate(ts: transport_simulation.TransportSimulation, simulation_time_se
 
 
 def get_MW_stats_list_by_force(MW: int, simulation_time_sec: float, n_processors: int,
-                               is_change_cell_volume: bool = False):
+                               is_change_cell_volume: bool = False) -> tuple:
     """
-
+    Runs different transport simulations (in parallel) containing different NLS strengths and substrate stiffnesses and
+    for a given molecular weight of the cargo molecule (MW influences the passive and facilitated diffusion rates of
+    cargo molecule)
 
     :param MW: molecular weight of the cargo (in kDa)
     :param simulation_time_sec: time interval (in seconds) for which the simulation is run
     :param n_processors: number of CPUs to use for multiprocessing
     :param is_change_cell_volume: whether the cell volume changes when force is applied
+    :return: a tuple containing a dictionary of simulation properties with their values calculated at each time frame
+             of the simulation and the transport simulation used
     """
-    import pdb; pdb.set_trace()
-    assert (MW in [27, 41, 54, 67])
+    assert MW in [27, 41, 54, 67]
     stats_list_by_force = {}
     TSs_by_force = {}
     for is_force in [False, True]:
@@ -706,8 +683,10 @@ def get_MW_stats_list_by_force(MW: int, simulation_time_sec: float, n_processors
 def plot_MW_stats_list(stats_list_by_force, TSs_by_force) -> None:
     """
 
-    :param stats_list_by_force:
-    :param TSs_by_force:
+
+    :param stats_list_by_force: a dictionary of dictionaries of simulation properties with their values calculated at
+                                each time frame of the simulation
+    :param TSs_by_force: a dictionary of corresponding transport simulations used to obtain the stats lists
     :return: None
     """
     plot_from_sec = 0.1  # ts.bleach_start_time_sec + 1.0
@@ -837,7 +816,7 @@ if __name__ == '__main__':
     sim_flags = {}  #rate_free_to_complex_per_sec=1.0,
     #max_passive_diffusion_rate_nmol_per_sec_per_M=2e7)
     #ts= get_ts_time_series(dt_sec= 2e-3, **sim_flags)
-    ts = get_ts_time_series_3(passive_nuclear_molar_rate_per_sec=0.04, is_force=False, **sim_flags)
+    ts = get_ts_time_series_3(passive_diffusion_molar_rate_per_sec=0.04, is_force=False, **sim_flags)
     stats = ts.simulate(sim_time_sec, nskip_statistics=10)
 
 
@@ -965,7 +944,7 @@ if __name__ == '__main__':
         passive = passive_space[i]
         for is_force_volume in [False]:  # [False, True]
             def transport_simulation_generator(**kwargs):
-                return get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec=passive,
+                return get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec=passive,
                                                            is_force_volume=is_force_volume,
                                                            **kwargs)
 
@@ -1036,7 +1015,7 @@ if __name__ == '__main__':
         for is_force_volume in [False]:  # [False, True]
             def transport_simulation_generator(**kwargs):
                 print(f"Ran: {Ran_cell_M:.6f} M")
-                return get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec=passive,
+                return get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec=passive,
                                                            is_force_volume=is_force_volume,
                                                            Ran_cell_M=Ran_cell_M,
                                                            **kwargs)
@@ -1087,7 +1066,7 @@ if __name__ == '__main__':
         for is_force_volume in [False]:  # [False, True]
             def transport_simulation_generator(**kwargs):
                 print(f"Ran: {Ran_cell_M:.6f} M")
-                return get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec=passive,
+                return get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec=passive,
                                                            is_force_volume=is_force_volume,
                                                            Ran_cell_M=Ran_cell_M,
                                                            **kwargs)
@@ -1142,7 +1121,7 @@ if __name__ == '__main__':
             for is_force_volume in [False]:  # [False, True]
                 def transport_simulation_generator(**kwargs):
                     print(f"Ran: {Ran_cell_M:.6f} M")
-                    return get_transport_simulation_by_passive(passive_nuclear_molar_rate_per_sec=passive,
+                    return get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec=passive,
                                                                is_force_volume=is_force_volume,
                                                                Ran_cell_M=Ran_cell_M,
                                                                **kwargs)
@@ -1204,8 +1183,8 @@ if __name__ == '__main__':
         colors = ['r', 'g', 'b', 'k']
         ylim = ax.get_ylim()
         for MW, color in zip(MWs, colors):
-            y0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-            y1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+            y0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+            y1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
             y1 = min(y1, ylim[1] * 0.99)
             x0 = N2C.columns[0]
             x1 = N2C.columns[-1]
@@ -1257,8 +1236,8 @@ if __name__ == '__main__':
         colors = ['r', 'g', 'b', 'k']
         ylim = ax.get_ylim()
         for MW, color in zip(MWs, colors):
-            y0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-            y1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+            y0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+            y1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
             y1 = min(y1, ylim[1] * 0.99)
             x0 = N2C.columns[0]
             x1 = N2C.columns[-1]
@@ -1318,8 +1297,8 @@ if __name__ == '__main__':
         colors = ['r', 'g', 'b', 'k']
         ylim = ax.get_ylim()
         for MW, color in zip(MWs, colors):
-            y0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-            y1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+            y0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+            y1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
             y1 = min(y1, ylim[1] * 0.99)
             x0 = N2C.columns[0]
             x1 = N2C.columns[-1]
@@ -1382,8 +1361,8 @@ if __name__ == '__main__':
         colors = ['r', 'g', 'b', 'k']
         ylim = ax.get_ylim()
         for MW, color in zip(MWs, colors):
-            y0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-            y1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+            y0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+            y1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
             y1 = min(y1, ylim[1] * 0.99)
             x0 = N2C.columns[0]
             x1 = N2C.columns[-1]
@@ -1440,8 +1419,8 @@ if __name__ == '__main__':
         ix0 = np.argsort(np.abs(df_N2C.columns - x0))[0]
         ix1 = np.argsort(np.abs(df_N2C.columns - x1))[0]
         for MW in MWs:
-            y0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-            y1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+            y0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+            y1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
             iy0 = np.argsort(np.abs(df_N2C.index - y0))[0]
             iy1 = np.argsort(np.abs(df_N2C.index - y1))[0]
             if (MW > 50):
@@ -1557,8 +1536,8 @@ if __name__ == '__main__':
         ix0 = np.argsort(np.abs(df_N2C.columns - x0))[0]
         ix1 = np.argsort(np.abs(df_N2C.columns - x1))[0]
         for MW in MWs:
-            y0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-            y1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+            y0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+            y1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
             iy0 = np.argsort(np.abs(df_N2C.index - y0))[0]
             iy1 = np.argsort(np.abs(df_N2C.index - y1))[0]
             if (MW > 50):
@@ -1668,8 +1647,8 @@ if __name__ == '__main__':
         ix0 = np.argsort(np.abs(df_N2C.columns - x0))[0]
         ix1 = np.argsort(np.abs(df_N2C.columns - x1))[0]
         for MW in MWs:
-            y0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-            y1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+            y0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+            y1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
             iy0 = np.argsort(np.abs(df_N2C.index - y0))[0]
             iy1 = np.argsort(np.abs(df_N2C.index - y1))[0]
             if (MW > 50):
@@ -1752,9 +1731,7 @@ if __name__ == '__main__':
     print(f"{N2C_vol:.2f}")
     for is_transform in [False, True]:
         print(f"is_transform {is_transform}")
-        plot_dX_dY_Z(df,
-                     is_transform=is_transform,
-                     N2C_vol=N2C_vol)
+        plot_dX_dY_Z(df, is_transform=is_transform, N2C_vol=N2C_vol)
     print("End of cell 62")
     plt.show()
 
@@ -1791,8 +1768,8 @@ if __name__ == '__main__':
         colors = ['r', 'g', 'b', 'k']
         xlim = ax.get_xlim()
         for MW, color in zip(MWs, colors):
-            x0 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=False)
-            x1 = get_passive_nuclear_molar_rate_per_sec(MW, is_force=True)
+            x0 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=False)
+            x1 = get_passive_diffusion_molar_rate_per_sec(MW, is_force=True)
             x1 = min(x1, xlim[1] * 0.99)
             y0 = N2C.index[0]
             y1 = N2C.index[-1]

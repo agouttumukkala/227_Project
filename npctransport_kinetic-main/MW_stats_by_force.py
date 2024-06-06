@@ -48,8 +48,7 @@ def get_ts_with_parameters(MW=27,
     ts.rate_GDP_N_to_GDP_C_per_sec = 1.0
     ts.rate_complex_to_free_per_sec = 0.05
     #
-    ts.set_passive_nuclear_molar_rate_per_sec(
-        get_passive_nuclear_molar_rate_per_sec(MW, is_force))
+    ts.set_passive_diffusion_molar_rate_per_sec(get_passive_diffusion_molar_rate_per_sec(MW, is_force))
     ts.set_params(rate_free_to_complex_per_sec=get_free_to_complex_rate(NLS_strength))
     ts.set_params(fraction_complex_NPC_traverse_per_sec=get_fraction_complex_NPC_traverse_per_sec(MW, is_force))
     #
@@ -61,7 +60,7 @@ def get_free_to_complex_rate(NLS_strength):
     return free_to_complex_rates[NLS_strength]
 
 
-def get_passive_nuclear_molar_rate_per_sec(MW,
+def get_passive_diffusion_molar_rate_per_sec(MW,
                                            is_force):  # TODO: verify it corresponds to multiplyng by concentration rather than nmolecules
     # TODO: generalize this - either from the literature or regression
     base_rates = {27: 0.0805618,  # measured
