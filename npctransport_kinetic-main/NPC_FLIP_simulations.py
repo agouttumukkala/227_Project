@@ -17,7 +17,6 @@ from matplotlib import ticker
 import copy
 import importlib
 import stats_grid
-import time
 
 
 def create_plot(plot, plot_data: list, xlabel=None, ylabel=None, set_lsandfs: bool = False):
@@ -312,12 +311,12 @@ def my_plot_param_grid(df: pandas.DataFrame,  # a pivoted 2D dataframe
 
 def transform_N2C_to_N_relative(N2C: np.float64, N2C_vol: float) -> np.float64:
     """
+    Calculates the relative nuclear molar ratio (moles of cargo in nucleus / total moles of cargo)
 
-    :param N2C:
+    :param N2C: nuclear to cytoplasm concentration ratio
     :param N2C_vol: the ratio of nuclear vol to cytoplasmic volume (v_N_L / v_C_L)
-    :return:
+    :return: the relative nuclear molar ratio
     """
-    import pdb; pdb.set_trace()
     N_relative = (N2C * N2C_vol) / (1 + N2C * N2C_vol)
     return N_relative
 
@@ -326,15 +325,12 @@ def plot_dX_dY_Z(df: pandas.DataFrame, is_transform: bool = False, N2C_vol: floa
     """
 
 
-    :param df:
-    :param is_transform:
+    :param df: pandas dataframe resulting from running map_param_grid.get_df_from_stats_grids_by_passive
+    :param is_transform: whether to transform N:C ratios to N moles / Total moles
     :param N2C_vol: the ratio of nuclear vol to cytoplasmic volume (v_N_L / v_C_L)
     :return: None
     """
     NLSs = df['rate_free_to_complex_per_sec'].unique()
-    NLS_starti = len(NLSs) // 4
-    NLS_endi = len(NLSs) // 4 * 3
-    NLSs = NLSs[NLS_starti:NLS_endi]
     nrow = len(NLSs)
     ncol = 3 if is_transform else 4
     fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=False, squeeze=False,
@@ -342,8 +338,7 @@ def plot_dX_dY_Z(df: pandas.DataFrame, is_transform: bool = False, N2C_vol: floa
     if is_transform:
         zlabel_by_column = {0: r"dN / dX",
                             1: r"dN / dY",
-                            2: r"N saturation",
-                            3: r"N saturation"}
+                            2: r"N saturation"}
     else:
         zlabel_by_column = {0: r"dNC / dX",
                             1: r"dNC / dY",
@@ -353,10 +348,9 @@ def plot_dX_dY_Z(df: pandas.DataFrame, is_transform: bool = False, N2C_vol: floa
     for axes, NLS in zip(axes, NLSs):
         is_NLS = np.isclose(df['rate_free_to_complex_per_sec'], NLS)
         N2C = df[is_NLS].pivot(index='passive_rate', columns='fraction_complex_NPC_traverse_per_sec', values='N2C')
-        N_relative = (N2C * N2C_vol) / (1 + N2C * N2C_vol)
+        N_relative = transform_N2C_to_N_relative(N2C, N2C_vol)
         for column, ax in enumerate(axes):
             if column in [0, 1]:
-
                 if is_transform:
                     is_linear = True
                     Z_diff = np.diff(N_relative.values, axis=(1 - column), append=0)
@@ -392,7 +386,7 @@ def plot_dX_dY_Z(df: pandas.DataFrame, is_transform: bool = False, N2C_vol: floa
                                     pretty_x=r'rate NPC traverse [$sec^{-1}$]',
                                     pretty_y=r'passive rate [$sec^{-1}$]' if column == 0 else None,
                                     pretty_z=zlabel_by_column[column],
-                                    is_colorbar=not is_shared_colorbar,
+                                    is_colorbar=True,
                                     vmin=NC_min,
                                     vmax=NC_max,
                                     levels=levels,
@@ -410,12 +404,16 @@ def plot_dX_dY_Z(df: pandas.DataFrame, is_transform: bool = False, N2C_vol: floa
                 plt.annotate(str(MW), (x0, y0), color=color)
                 ax.plot((x0, x1), (y1, y1), color + "-", linewidth=3.0)
             ax.set_ylim(ylim)
-            plt.title(f"NLS $k_{{on}}$={NLS * 1000:.1f} $ms^{{-1}}$")
-    plt.tight_layout()
+            plt.title(f"NLS $k_{{on}}$ = {NLS * 1000:.1f} $ms^{{-1}}$")
+    if is_transform:
+        fig.suptitle("Graphs of Relative Difference by NPC Traverse and Passive Rates and Direct Plotting (Relative N moles)")
+    else:
+        fig.suptitle("Graphs of Relative Difference by NPC Traverse and Passive Rates and Direct Plotting (N:C Ratios)")
 
 
-def plot_cells(cells_column: str = 'fraction_complex_NPC_traverse_per_sec',
-               pretty_cell: str = "rate NPC traverse {:.1f} $sec^{{-1}}$",
+def plot_cells(window_title: str = "",
+               cells_column: str = 'fraction_complex_NPC_traverse_per_sec',
+               pretty_cell: str = "rate NPC traverse = {:.1f} $sec^{{-1}}$",
                x_column: str = 'passive_rate',
                pretty_x: str = r'passive rate [$sec^{-1}$]',
                y_column: str = 'rate_free_to_complex_per_sec',
@@ -423,6 +421,7 @@ def plot_cells(cells_column: str = 'fraction_complex_NPC_traverse_per_sec',
     """
 
 
+    :param window_title:
     :param cells_column:
     :param pretty_cell:
     :param x_column:
@@ -475,6 +474,7 @@ def plot_cells(cells_column: str = 'fraction_complex_NPC_traverse_per_sec',
     ticks = cb.get_ticks()
     cb.set_ticks(ticks)
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    fig.suptitle(window_title)
 
 
 def get_dLogRatios_by_passive(stats_grids_by_passive: dict, ts_by_passive: dict) -> dict:
@@ -680,13 +680,15 @@ def get_MW_stats_list_by_force(MW: int, simulation_time_sec: float, n_processors
     return stats_list_by_force, TSs_by_force
 
 
-def plot_MW_stats_list(stats_list_by_force, TSs_by_force) -> None:
+def plot_MW_stats_list(stats_list_by_force: dict, TSs_by_force: dict, MW: int, is_change_cell_volume: bool) -> None:
     """
 
 
     :param stats_list_by_force: a dictionary of dictionaries of simulation properties with their values calculated at
                                 each time frame of the simulation
     :param TSs_by_force: a dictionary of corresponding transport simulations used to obtain the stats lists
+    :param MW: molecular weight of the cargo (in kDa)
+    :param is_change_cell_volume: whether the nuclear and cytoplasm change volume when force applied
     :return: None
     """
     plot_from_sec = 0.1  # ts.bleach_start_time_sec + 1.0
@@ -751,7 +753,7 @@ def plot_MW_stats_list(stats_list_by_force, TSs_by_force) -> None:
             for iextra, extra in enumerate(extras):
                 axes[7 + iextra].set_ylabel(extra)
                 axes[7 + iextra].set_yscale('log')
-            title = "30 kPa" if is_force else "5 kPa"
+            title = "30 kPa (Stiff)" if is_force else "5 kPa (Soft)"
             axes[0].set_title(title)
 
     NLSs = [get_free_to_complex_rate(i_NLS) for i_NLS in range(ratios.shape[1])]
@@ -763,6 +765,8 @@ def plot_MW_stats_list(stats_list_by_force, TSs_by_force) -> None:
     handles, labels = ax_grid[0, 0].get_legend_handles_labels()
     lh = fig.legend(handles, labels, loc='center left')
     lh.set_title('NLS strength')
+    suffix = " and Force Changes Volume" if is_change_cell_volume else " and Volume is Constant"
+    fig.suptitle("Various Stats Over Time for Different NLSs for MW = " + str(MW) + suffix)
 
 
 if __name__ == '__main__':
@@ -908,7 +912,6 @@ if __name__ == '__main__':
                                    vmax=NC_max, levels=np.linspace(NC_min, NC_max, 21), extend='both')
     print("End of cell 22")
     plt.show()
-    time.sleep(5)
     print(param_range)
     print(param_range2)
 
@@ -964,7 +967,6 @@ if __name__ == '__main__':
                              NC_min=1.0)
     print("End of cell 28")
     plt.show()
-    time.sleep(5)
     print("*** Finished multiprocess run ***")
     # Pickle results
 
@@ -982,7 +984,6 @@ if __name__ == '__main__':
                          vmax_import_export=10.0, NC_max=3.0, NC_min=1.0)
     print("End of cell 30")
     plt.show()
-    time.sleep(5)
 
     #  CELL 31:
     keys = sorted(stats_grids_traverse_by_passive_force.keys(), key=lambda x: (x[0], x[1]))
@@ -994,7 +995,6 @@ if __name__ == '__main__':
                          vmax_import_export=10.0, NC_max=30.0, NC_min=1.0)
     print("End of cell 31")
     plt.show()
-    time.sleep(5)
 
     ## Heatmaps with Ran of 40 mM
 
@@ -1036,7 +1036,6 @@ if __name__ == '__main__':
                              NC_min=1.0)
     print("End of cell 33")
     plt.show()
-    time.sleep(5)
     print("*** Finished multiprocess run ***")
 
     # Pickle results
@@ -1085,7 +1084,6 @@ if __name__ == '__main__':
                              vmax_import_export=10.0, NC_max=30.0, NC_min=1.0)
     print("End of cell 36")
     plt.show()
-    time.sleep(5)
     print("*** Finished multiprocess run ***")
     # Pickle results
 
@@ -1245,14 +1243,17 @@ if __name__ == '__main__':
             plt.annotate(str(MW), (x0, y0), color=color)
             ax.plot((x0, x1), (y1, y1), color + "-", linewidth=3.0)
         ax.set_ylim(ylim)
-        plt.title(f"NLS $k_{{on}}${NLS:.4f} $sec^{{-1}}$")
+        plt.title(f"NLS $k_{{on}} = ${NLS:.4f} $sec^{{-1}}$")
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.85, 0.3, 0.03, 0.4])
     cb = fig.colorbar(ct, cax=cbar_ax)
     ticks = cb.get_ticks()
     cb.set_ticks(ticks)
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    cb.set_label("N:C Ratio", rotation=90)
+
     print("End of cell 44")
+    fig.suptitle("N:C Concentration Ratios for Different NLS Strengths")
     plt.show()
 
     ## absolute dZ/dY (normalized by Z)
@@ -1263,11 +1264,7 @@ if __name__ == '__main__':
     NLSs = df['rate_free_to_complex_per_sec'].unique()[:]
     ncol = 3
     nrow = len(NLSs) // ncol + (len(NLSs) % ncol > 0) * 1
-    fig, axes = plt.subplots(nrow, ncol,
-                             sharex=True,
-                             sharey=True,
-                             squeeze=False,
-                             figsize=(17.0, 4.0 * nrow + 1.0))
+    fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=True, squeeze=False, figsize=(17.0, 4.0 * nrow + 1.0))
     axes_iter = iter(axes.reshape(-1))
     is_shared_colorbar = True
     for NLS in NLSs:
@@ -1276,8 +1273,7 @@ if __name__ == '__main__':
         N2C = df[is_NLS].pivot(index='passive_rate',
                                columns='fraction_complex_NPC_traverse_per_sec',
                                values='N2C')
-        N2C_diff = pd.DataFrame(np.abs(np.diff(N2C.values, axis=0, append=0) / N2C.values),
-                                index=N2C.index,
+        N2C_diff = pd.DataFrame(np.abs(np.diff(N2C.values, axis=0, append=0) / N2C.values), index=N2C.index,
                                 columns=N2C.columns)
         NC_min = 0.01
         NC_max = 0.4
@@ -1306,7 +1302,7 @@ if __name__ == '__main__':
             plt.annotate(str(MW), (x0, y0), color=color)
             ax.plot((x0, x1), (y1, y1), color + "-", linewidth=3.0)
         ax.set_ylim(ylim)
-        plt.title(f"NLS $k_{{on}}${NLS:.4f} $sec^{{-1}}$")
+        plt.title(f"NLS $k_{{on}} = ${NLS:.4f} $sec^{{-1}}$")
     if is_shared_colorbar:
         fig.subplots_adjust(right=0.8)
         cbar_ax = fig.add_axes([0.85, 0.3, 0.03, 0.4])
@@ -1314,11 +1310,12 @@ if __name__ == '__main__':
         ticks = cb.get_ticks()
         cb.set_ticks(ticks)
         cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+        cb.set_label(r'($N:C_{i+1}$ - $N:C_{i}$)/($N:C_{i}$)', rotation=90)
+    fig.suptitle("Relative Differences in N:C Ratios btw Current and Next Passive Rate for each NLS")
     print("End of cell 46")
     plt.show()
 
 
-    #  CELL 47:
     ## absolute dZ/dX (normalized by Z)
 
 
@@ -1333,15 +1330,12 @@ if __name__ == '__main__':
                              squeeze=False,
                              figsize=(17.0, 4.0 * nrow + 1.0))
     axes_iter = iter(axes.reshape(-1))
-    is_shared_colorbar = False
+    is_shared_colorbar = True
     for NLS in NLSs:
         ax = next(axes_iter)
         is_NLS = np.isclose(df['rate_free_to_complex_per_sec'], NLS)
-        N2C = df[is_NLS].pivot(index='passive_rate',
-                               columns='fraction_complex_NPC_traverse_per_sec',
-                               values='N2C')
-        N2C_diff = pd.DataFrame(np.abs(np.diff(N2C.values, axis=1, append=0)) / N2C.values,
-                                index=N2C.index,
+        N2C = df[is_NLS].pivot(index='passive_rate', columns='fraction_complex_NPC_traverse_per_sec', values='N2C')
+        N2C_diff = pd.DataFrame(np.abs(np.diff(N2C.values, axis=1, append=0)) / N2C.values, index=N2C.index,
                                 columns=N2C.columns)
         NC_min = 0.01
         NC_max = 0.4
@@ -1370,7 +1364,7 @@ if __name__ == '__main__':
             plt.annotate(str(MW), (x0, y0), color=color)
             ax.plot((x0, x1), (y1, y1), color + "-", linewidth=3.0)
         ax.set_ylim(ylim)
-        plt.title(f"NLS $k_{{on}}${NLS:.4f} $sec^{{-1}}$")
+        plt.title(f"NLS $k_{{on}} = ${NLS:.4f} $sec^{{-1}}$")
     if is_shared_colorbar:
         fig.subplots_adjust(right=0.8)
         cbar_ax = fig.add_axes([0.85, 0.3, 0.03, 0.4])
@@ -1378,6 +1372,8 @@ if __name__ == '__main__':
         ticks = cb.get_ticks()
         cb.set_ticks(ticks)
         cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+        cb.set_label(r'($N:C_{i+1}$ - $N:C_{i}$)/($N:C_{i}$)', rotation=90)
+    fig.suptitle("Relative Differences in N:C Ratios btw Current and Next NPC Traverse Rate for each NLS")
     print("End of cell 48")
     plt.show()
 
@@ -1411,9 +1407,7 @@ if __name__ == '__main__':
         NLS_match = NLSs[iNLS]
         print(f"\n\n\n----\nNLS match {NLS_match * 1e3} ms^-1")
         is_NLS = df['rate_free_to_complex_per_sec'] == NLS_match
-        df_N2C = df[is_NLS].pivot(index='passive_rate',
-                                  columns='fraction_complex_NPC_traverse_per_sec',
-                                  values='N2C')
+        df_N2C = df[is_NLS].pivot(index='passive_rate', columns='fraction_complex_NPC_traverse_per_sec', values='N2C')
         x0 = 15.0
         x1 = 150.0
         ix0 = np.argsort(np.abs(df_N2C.columns - x0))[0]
@@ -1441,14 +1435,14 @@ if __name__ == '__main__':
                 N2C_by_NLS_yes.append(yes)
                 Mechano_by_NLS.append(mechano)
         fig, ax = plt.subplots(2, 1, figsize=(3.5, 6), sharex=True)
-        ax[0].plot(np.array(MWs) - 1, N2Cs_no, 'bo', label='soft', markersize=4)
-        ax[0].plot(np.array(MWs) + 1, N2Cs_yes, 'ro', label='stiff', markersize=4)
+        ax[0].plot(np.array(MWs) - 1, N2Cs_no, 'bo-', label='soft', markersize=4)
+        ax[0].plot(np.array(MWs) + 1, N2Cs_yes, 'ro-', label='stiff', markersize=4)
         ax[0].set_ylabel("N:C")
         ax[0].legend(frameon=True)
-        ax[1].plot(MWs, Mechanos, 'ko')
+        ax[1].plot(MWs, Mechanos, 'ko-')
         ax[1].set_xlabel("MW [kDa]")
-        ax[1].set_ylabel("mechanosensitivity")
-        ax[1].set_ylim([0.5, 3.0])
+        ax[1].set_ylabel("Mechanosensitivity")
+        # ax[1].set_ylim([0.5, 3.0])
         ax[1].set_yscale('log')
         positions = [0.5, 1.0, 2.0, 4.0]
         ax[1].yaxis.set_major_locator(ticker.FixedLocator(positions))
@@ -1456,6 +1450,8 @@ if __name__ == '__main__':
         ax[1].yaxis.set_minor_locator(ticker.FixedLocator([]))
         ax[1].yaxis.set_minor_formatter(ticker.FixedFormatter([]))
         ax[0].set_xticks(MWs)
+        fig.suptitle(f"N:C Ratio and Mechanosensitivity for NLS $k_{{on}} = ${NLS:.4f} $sec^{{-1}}$")
+        print(f"NLS $k_{{on}} = ${NLS:.4f} $sec^{{-1}}$")
         print("MWs", MWs)
         print("N2C soft", N2Cs_no)
         print("N2C stiff", N2Cs_yes)
@@ -1464,14 +1460,14 @@ if __name__ == '__main__':
 
     for xmax in [None, 400.0]:
         fig, ax = plt.subplots(2, 1, figsize=(3.5, 6), sharex=True)
-        ax[0].plot(NLSs_subset * 1e3 - 1, N2C_by_NLS_no, 'bo', label='soft', markersize=4)
-        ax[0].plot(NLSs_subset * 1e3 + 1, N2C_by_NLS_yes, 'ro', label='stiff', markersize=4)
+        ax[0].plot(NLSs_subset * 1e3 - 1, N2C_by_NLS_no, 'bo-', label='soft', markersize=4)
+        ax[0].plot(NLSs_subset * 1e3 + 1, N2C_by_NLS_yes, 'ro-', label='stiff', markersize=4)
         ax[0].set_ylabel("N:C")
         ax[0].legend(frameon=True)
-        ax[1].plot(NLSs_subset * 1e3, Mechano_by_NLS, 'ko')
-        ax[1].set_xlabel(r"NLS strength [$ms^1$]")
-        ax[1].set_ylabel("mechanosensitivity")
-        ax[1].set_ylim([0.5, 3.0])
+        ax[1].plot(NLSs_subset * 1e3, Mechano_by_NLS, 'ko-')
+        ax[1].set_xlabel(r"NLS strength [$ms^{-1}$]")
+        ax[1].set_ylabel("Mechanosensitivity")
+        # ax[1].set_ylim([0.5, 3.0])
         ax[1].set_yscale('log')
         positions = [0.5, 1.0, 2.0, 4.0]
         ax[1].yaxis.set_major_locator(ticker.FixedLocator(positions))
@@ -1485,6 +1481,7 @@ if __name__ == '__main__':
         print("N2C stiff", N2C_by_NLS_yes)
         print("mechano:", Mechano_by_NLS)
         print()
+        fig.suptitle("N:C Ratio and Mechnosensitivity at Different NLSs for MW = 41 kDa")
     print("End of cell 51")
     plt.show()
 
@@ -1556,18 +1553,18 @@ if __name__ == '__main__':
         if PLOT_EACH:
             fig, ax = plt.subplots(4, 1, figsize=(3.5, 9), sharex=True)
             for i, category in enumerate(['import', 'export', 'import:export']):
-                ax[i].plot(np.array(MWs) - 1, No[category], 'bo', label='soft', markersize=4)
-                ax[i].plot(np.array(MWs) + 1, Yes[category], 'ro', label='stiff', markersize=4)
-                ax[i].set_ylabel(category)
+                ax[i].plot(np.array(MWs) - 1, No[category], 'bo-', label='soft', markersize=4)
+                ax[i].plot(np.array(MWs) + 1, Yes[category], 'ro-', label='stiff', markersize=4)
+                ax[i].set_ylabel("nuclear " + category + " rate $sec^{{-1}}$")
                 ax[i].legend(frameon=True)
                 ax[i].set_xticks(MWs)
                 if category in ['import', 'export']:
                     ax[i].set_yscale('log')
                 ax[i].set_ylim(ymax=1.1 * max(max(Yes[category]), max(No[category])))
-            ax[-1].plot(MWs, Mechanos[category], 'ko')
+            ax[-1].plot(MWs, Mechanos[category], 'ko-')
             ax[-1].set_xlabel("MW [kDa]")
-            ax[-1].set_ylabel("mechanosensitivity")
-            ax[-1].set_ylim([0.5, 3.0])
+            ax[-1].set_ylabel("Mechanosensitivity")
+            # ax[-1].set_ylim([0.5, 3.0])
             ax[-1].set_yscale('log')
             positions = [0.5, 1.0, 2.0, 4.0]
             ax[-1].yaxis.set_major_locator(ticker.FixedLocator(positions))
@@ -1577,14 +1574,14 @@ if __name__ == '__main__':
             print("MWs", MWs)
             print("Soft", No)
             print("Stiff", Yes)
-            print("mechano:", Mechanos)
+            print("Mechano:", Mechanos)
             print()
 
     for xmax in [None, 400.0]:
         fig, ax = plt.subplots(4, 1, figsize=(3.5, 9), sharex=True)
         for i, category in enumerate(['import', 'export', 'import:export']):
-            ax[i].plot(NLSs_subset * 1e3 - 1, No_by_NLS[category], 'bo', label='soft', markersize=4)
-            ax[i].plot(NLSs_subset * 1e3 + 1, Yes_by_NLS[category], 'ro', label='stiff', markersize=4)
+            ax[i].plot(NLSs_subset * 1e3 - 1, No_by_NLS[category], 'bo-', label='soft', markersize=4)
+            ax[i].plot(NLSs_subset * 1e3 + 1, Yes_by_NLS[category], 'ro-', label='stiff', markersize=4)
             ax[i].set_ylabel(category)
             ax[i].legend(frameon=True)
             ax[i].set_xlim(xmin=1.0, xmax=xmax)
@@ -1592,10 +1589,10 @@ if __name__ == '__main__':
             if category in ['import', 'export']:
                 ax[i].set_yscale('log')
                 ax[i].set_ylim(ymax=1.1 * max(max(Yes[category]), max(No[category])))
-        ax[-1].plot(NLSs_subset * 1e3, Mechanos_by_NLS[category], 'ko')
-        ax[-1].set_xlabel(r"NLS strength [$ms^1$]")
-        ax[-1].set_ylabel("mechanosensitivity")
-        ax[-1].set_ylim([0.5, 3.0])
+        ax[-1].plot(NLSs_subset * 1e3, Mechanos_by_NLS[category], 'ko-')
+        ax[-1].set_xlabel(r"NLS strength [$ms^{-1}$]")
+        ax[-1].set_ylabel("Mechanosensitivity")
+        # ax[-1].set_ylim([0.5, 3.0])
         ax[-1].set_yscale('log')
         positions = [0.5, 1.0, 2.0, 4.0]
         ax[-1].yaxis.set_major_locator(ticker.FixedLocator(positions))
@@ -1607,6 +1604,7 @@ if __name__ == '__main__':
         print("Stiff", Yes_by_NLS)
         print("Mechano:", Mechano_by_NLS)
         print()
+        fig.suptitle("Nuclear Import and Export Stats for NLSs if MW = 41 kDa")
     print("End of cell 54")
     plt.show()
 
@@ -1669,19 +1667,17 @@ if __name__ == '__main__':
                 Nsat_by_NLS_yes.append(transform_N2C_to_N_relative(yes, N2C_vol))
                 Mechano_by_NLS.append(mechano)
         fig, ax = plt.subplots(2, 1, figsize=(3.5, 6), sharex=True)
-        ax[0].plot(np.array(MWs) - 1, Nsat_no,
-                   'bo', label='soft', markersize=4)
-        ax[0].plot(np.array(MWs) + 1, Nsat_yes,
-                   'ro', label='stiff', markersize=4)
+        ax[0].plot(np.array(MWs) - 1, Nsat_no, 'bo-', label='soft', markersize=4)
+        ax[0].plot(np.array(MWs) + 1, Nsat_yes, 'ro-', label='stiff', markersize=4)
         ax[0].set_xticks(MWs)
-        ax[0].set_ylabel("N saturation")
+        ax[0].set_ylabel("N moles / Total moles")
         ax[0].legend(frameon=True)
         ax[0].set_ylim(0.1, 1)
         ax[0].set_yscale('log')
-        ax[1].plot(MWs, Mechanos, 'ko')
+        ax[1].plot(MWs, Mechanos, 'ko-')
         ax[1].set_xlabel("MW [kDa]")
-        ax[1].set_ylabel("mechanosensitivity")
-        ax[1].set_ylim([0.5, 3.0])
+        ax[1].set_ylabel("Mechanosensitivity")
+        # ax[1].set_ylim([0.5, 3.0])
         ax[1].set_yscale('log')
         positions = [0.5, 1.0, 2.0, 4.0]
         ax[1].yaxis.set_major_locator(ticker.FixedLocator(positions))
@@ -1693,18 +1689,20 @@ if __name__ == '__main__':
         print("N sat. stiff", Nsat_yes)
         print("mechano:", Mechanos)
         print()
+        fig.suptitle(f"Nuclear Saturation and Mechanosensitivity for NLS $k_{{on}} = ${NLS:.4f} $sec^{{-1}}$")
+
 
     fig, ax = plt.subplots(2, 1, figsize=(3.5, 6), sharex=True)
-    ax[0].plot(NLSs_subset * 1e3 - 1, Nsat_by_NLS_no, 'bo', label='soft', markersize=4)
-    ax[0].plot(NLSs_subset * 1e3 + 1, Nsat_by_NLS_yes, 'ro', label='stiff', markersize=4)
-    ax[0].set_ylabel("N saturation")
+    ax[0].plot(NLSs_subset * 1e3 - 1, Nsat_by_NLS_no, 'bo-', label='soft', markersize=4)
+    ax[0].plot(NLSs_subset * 1e3 + 1, Nsat_by_NLS_yes, 'ro-', label='stiff', markersize=4)
+    ax[0].set_ylabel("N moles / Total moles")
     ax[0].set_ylim(0.1, 1)
     ax[0].set_yscale('log')
     ax[0].legend(frameon=True)
-    ax[1].plot(NLSs_subset * 1e3, Mechano_by_NLS, 'ko')
-    ax[1].set_xlabel(r"NLS strength [$ms^1$]")
-    ax[1].set_ylabel("mechanosensitivity")
-    ax[1].set_ylim([0.5, 3.0])
+    ax[1].plot(NLSs_subset * 1e3, Mechano_by_NLS, 'ko-')
+    ax[1].set_xlabel(r"NLS strength [$ms^{-1}$]")
+    ax[1].set_ylabel("Mechanosensitivity")
+    # ax[1].set_ylim([0.5, 3.0])
     ax[1].set_yscale('log')
     positions = [0.5, 1.0, 2.0, 4.0]
     ax[1].yaxis.set_major_locator(ticker.FixedLocator(positions))
@@ -1716,6 +1714,7 @@ if __name__ == '__main__':
     print("Nsat stiff", Nsat_by_NLS_yes)
     print("mechano:", Mechano_by_NLS)
     print()
+    fig.suptitle("Nuclear Saturation and Mechnosensitivity at Different NLSs for MW = 41 kDa")
     print("End of cell 60")
     plt.show()
 
@@ -1732,6 +1731,7 @@ if __name__ == '__main__':
     for is_transform in [False, True]:
         print(f"is_transform {is_transform}")
         plot_dX_dY_Z(df, is_transform=is_transform, N2C_vol=N2C_vol)
+        plt.show()
     print("End of cell 62")
     plt.show()
 
@@ -1741,18 +1741,12 @@ if __name__ == '__main__':
     traverses = df['fraction_complex_NPC_traverse_per_sec'].unique()[:]
     ncol = 3
     nrow = len(traverses) // ncol + (len(traverses) % ncol > 0) * 1
-    fig, axes = plt.subplots(nrow, ncol,
-                             sharex=True,
-                             sharey=True,
-                             squeeze=False,
-                             figsize=(17.0, 4.0 * nrow + 1.0))
+    fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=True, squeeze=False, figsize=(17.0, 4.0 * nrow + 1.0))
     axes_iter = iter(axes.reshape(-1))
     for traverse in traverses:
         ax = next(axes_iter)
         is_traverse = np.isclose(df['fraction_complex_NPC_traverse_per_sec'], traverse)
-        N2C = df[is_traverse].pivot(index='rate_free_to_complex_per_sec',
-                                    columns='passive_rate',
-                                    values='N2C')
+        N2C = df[is_traverse].pivot(index='rate_free_to_complex_per_sec', columns='passive_rate', values='N2C')
         NC_min = 1.0
         NC_max = 10.0
         plt.sca(ax)
@@ -1777,21 +1771,18 @@ if __name__ == '__main__':
             plt.annotate(str(MW), (x0, y0), color=color)
             ax.plot((x1, x1), (y0, y1), color + "-", linewidth=3.0)
         ax.set_xlim(xlim)
-        plt.title(f"rate NPC traverse ${traverse:.1f} $sec^{{-1}}$")
+        plt.title(f"rate NPC traverse = {traverse:.1f} $sec^{{-1}}$")
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.85, 0.3, 0.03, 0.4])
     cb = fig.colorbar(ct, cax=cbar_ax)
     ticks = cb.get_ticks()
     cb.set_ticks(ticks)
     cb.set_ticklabels(["{:.2f}".format(tick) for tick in ticks])
+    cb.set_label('N:C Ratio', rotation=90)
+    fig.suptitle("N:C Concentration Ratios for Different Facilitated Diffusion Rates")
     print("End of cell 63")
     plt.show()
 
-
-    #  CELL 64:
-    plot_cells()
-    print("End of cell 64")
-    plt.show()
 
     ## next one
 
@@ -1799,8 +1790,10 @@ if __name__ == '__main__':
     dRatios_by_passive = get_dLogRatios_by_passive(stats_grids_by_passive, ts_by_passive)
     for key in sorted(stats_grids_by_passive.keys())[:-1]:
         print(key)
+        plt.figure()
         map_param_grid.plot_param_grid(param_range, dRatios_by_passive[key], Z_label="dN/C log ratio", vmin=-4.0, vmax=1.0,
                             levels=np.linspace(-4.0, 1.0, 21), extend='both')
+        plt.title(f"Log of Differences in N:C Ratios btw Current and Next Passive Rate for each NLS, passive rate = {key} [$sec^{-1}$] ")
     print("End of cell 66")
     plt.show()
 
@@ -1813,8 +1806,8 @@ if __name__ == '__main__':
         plot_stats_grids(stats_grids_traverse_by_passive_force[key], ts_traverse_by_passive_force[key],
                          vmax_import_export=10.0, NC_max=30.0, NC_min=1.0)
 
-    # Map NLS strength, MW size, force
     """
+    # Map NLS strength, MW size, force
 
 
     #  CELL 69:
@@ -1846,10 +1839,9 @@ if __name__ == '__main__':
         print(MW)
         MW_to_stats_list_by_force[MW] = get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors=n_processors,
                                                                    is_change_cell_volume=False)
-        plot_MW_stats_list(*MW_to_stats_list_by_force[MW])
+        plot_MW_stats_list(*(*MW_to_stats_list_by_force[MW], MW, False))
     print("End of cell 73")
     plt.show()
-    time.sleep(5)
 
 
     #  CELL 77:
@@ -1861,10 +1853,9 @@ if __name__ == '__main__':
         print(MW)
         MW_to_stats_list_by_force[MW] = get_MW_stats_list_by_force(MW, simulation_time_sec, n_processors=n_processors,
                                                                    is_change_cell_volume=True)
-        plot_MW_stats_list(*MW_to_stats_list_by_force[MW])
+        plot_MW_stats_list(*(*MW_to_stats_list_by_force[MW], MW, True))
     print("End of cell 77")
     plt.show()
-    time.sleep(5)
 
 
     #  CELL 79:
