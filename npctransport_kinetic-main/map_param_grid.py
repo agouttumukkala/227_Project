@@ -242,8 +242,10 @@ def get_df_from_stats_grids_by_passive(param_range: dict,
                         for numpy array for corresponding param ranges
     :param stats_grids: dictionary containing species information at the end of each simulation in the form of numpy
                         arrays (where each j-i pair is the result of a particular y-x pairing)
-    :param stats_grids_by_passive: dictionary of dictionaries where the values are stats_grids dictionaries and the keys passive rates are containing species information at the end of each
-                                   simulation in the form of numpy arrays (where each j-i pair is the result of a particular y-x pairing)
+    :param stats_grids_by_passive: dictionary of dictionaries where the values are stats_grids dictionaries and the keys
+                                   are passive rates and they containing species information at the end of each
+                                   simulation in the form of numpy arrays (where each j-i pair is the result of a
+                                   particular y-x pairing)
     :param ts_by_passive: dictionary of sample transport simulations for each passive rate to used to obtain some basic
                           information (e.g. cytoplasmic and nuclear volumes)
     :return: a Panda dataframe containing all the stats_grids info for each passive rate along with the corresponding

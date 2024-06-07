@@ -180,9 +180,7 @@ def plot_stats_grids(stats_grids: dict, transport_simulation: transport_simulati
     # cytoplasmic GDP: nuclear GDP
     plt.sca(axes[2, 1])
     GDP_ratio = stats_grids['GDP_C'] / stats_grids['GDP_N']
-    map_param_grid.plot_param_grid(param_range,
-                                   GDP_ratio,
-                                   Z_label=f"GDP C:N",
+    map_param_grid.plot_param_grid(param_range, GDP_ratio, Z_label=f"GDP C:N",
                                    #                     vmin=0.0,
                                    #                     vmax=vmax,
                                    #                     levels=np.linspace(0,vmax,11),
@@ -190,9 +188,7 @@ def plot_stats_grids(stats_grids: dict, transport_simulation: transport_simulati
     # nuclear Ran: cytoplasmic Ran
     plt.sca(axes[2, 2])
     Ran_ratio = (stats_grids['GTP_N'] + stats_grids['GDP_N']) / (stats_grids['GTP_C'] + stats_grids['GDP_C'])
-    map_param_grid.plot_param_grid(param_range,
-                                   Ran_ratio,
-                                   Z_label=f"Ran N:C",
+    map_param_grid.plot_param_grid(param_range, Ran_ratio, Z_label=f"Ran N:C",
                                    # vmin=0.0,
                                    # vmax=20,
                                    # levels=np.linspace(0, 20, 21),
@@ -210,10 +206,8 @@ def transport_simulation_generator(passive: float, Ran_cell_M: float, c_M: float
     :return: resulting transport simulation based on values and arguments given
     """
     print(f"Ran: {Ran_cell_M:.6f} M")
-    return get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec=passive,
-                                               Ran_cell_M=Ran_cell_M,
-                                               init_cargo_cytoplasm_M=c_M,
-                                               **kwargs)
+    return get_transport_simulation_by_passive(passive_diffusion_molar_rate_per_sec=passive, Ran_cell_M=Ran_cell_M,
+                                               init_cargo_cytoplasm_M=c_M, **kwargs)
 
 
 def get_stats_on_grid(output: str, passive_range: tuple, npc_traverse_range: tuple, k_on_range: tuple, nx: int = 20,
@@ -224,11 +218,11 @@ def get_stats_on_grid(output: str, passive_range: tuple, npc_traverse_range: tup
 
     :param output: an identifier for this set of simulations (used to name the png file of graphs)
     :param passive_range: tuple of the min and max values for the cargo passive transport (diffusion) rate range
-    :param npc_traverse_range: tuple of the min and max values for the NPC traverse rate range
-    :param k_on_range: tuple of the min and max values for the free-to-complex rate range
+    :param npc_traverse_range: tuple of the min and max values for the NPC traverse (facilitated diffusion) rate range
+    :param k_on_range: tuple of the min and max values for the free-to-complex rate range (NLS strength)
     :param nx: number of values used to discretize npc_traverse_range
     :param ny: number of values used to discretize k_on_range
-    :param n_passive:
+    :param n_passive: number of values used to discretize the passive transport range
     :param cargo_concentration_M: initial concentration of cargo in cell cytoplasm (in M)
     :param Ran_concentration_M: total Ran concentration in the nucleus and cytoplasm combined (in M)
     :param v_N_L: nucleus volume in liters
@@ -238,9 +232,7 @@ def get_stats_on_grid(output: str, passive_range: tuple, npc_traverse_range: tup
                         the x-y space of NPC traverse rates and free-to-complex rates (if no file desired, pass in None)
     :return: None
     """
-    param_range = get_param_range_traverse_kon(nx, ny,
-                                               npc_traverse_range,
-                                               k_on_range)
+    param_range = get_param_range_traverse_kon(nx, ny, npc_traverse_range, k_on_range)
     n_processors = os.cpu_count()
     stats_grids_traverse_by_passive_force = {}  # 2D maps of statistics for different passive diffusion params
     ts_traverse_by_passive_force = {}  # transport simulation object used for each
