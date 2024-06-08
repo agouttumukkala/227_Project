@@ -355,6 +355,7 @@ class TransportSimulation:
         self.rate_GTP_N_to_GDP_N_per_sec = 0.2
         self.rate_GTP_C_to_GDP_C_per_sec = 500.0
         self.rate_GTP_N_to_GTP_C_per_sec = 0.15
+        self.rate_usedGTP_N_to_GTP_C_per_sec = 0.5
         self.rate_GDP_C_to_GDP_N_per_sec = 0.2
         self.rate_GDP_N_to_GDP_C_per_sec = 0.2
         self.rate_complex_to_free_per_sec = 0.05
@@ -479,10 +480,9 @@ class TransportSimulation:
 
     @register_update()
     def get_nmol_GTP_N_to_GTP_C(self, T_list: list) -> None:
-        # TODO: might need to change this
         """
         Computes the number of GTP molecules exported from the nucleus to the cytoplasm over the dt time step and
-        updates the transition list accordingly
+        updates the transition list accordingly (used to account for other processes that use ranGTP in the nucleus)
 
         :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
                        from a molecular species source (src) to the molecular species destination (dst)
@@ -715,7 +715,7 @@ class TransportSimulation:
                        from a molecular species source (src) to the molecular species destination (dst)
         :return: None
         """
-        n = self.rate_GTP_N_to_GTP_C_per_sec * self.nmol['usedGTP_N'] * self.dt_sec # TODO: double check this rate
+        n = self.rate_usedGTP_N_to_GTP_C_per_sec * self.nmol['usedGTP_N'] * self.dt_sec
         register_move_nmol(T_list, src="usedGTP_N", dst="GTP_C", nmol=n)
 
 
