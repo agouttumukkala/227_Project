@@ -71,7 +71,6 @@ class TestTransport_Simulation(unittest.TestCase):
                     self.assertTrue(np.isclose(x, y, atol=1e-12, rtol=1e-5))
                 except AssertionError as e:
                     print(f"Species: {key}\nResult: {x}\tExpected: {y}")
-                    import pdb; pdb.set_trace()
 
     def test_constant_cargo(self, nsteps=1000):
         ts = transport_simulation.TransportSimulation()
