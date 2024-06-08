@@ -6,7 +6,6 @@ VERBOSE = False
 CHECKS = False
 
 
-# TODO: test
 def fL_to_L(v_fL: float) -> float:
     """
     Converts femtoliters to liters
@@ -176,6 +175,7 @@ class TransportSimulation:
         self.nmol["GTP_C"] = nmol_Ran_cell * RAN_distribution[1]
         self.nmol["GDP_N"] = nmol_Ran_cell * RAN_distribution[2]
         self.nmol["GDP_C"] = nmol_Ran_cell * RAN_distribution[3]
+        self.nmol['usedGTP_N'] = 0
 
     def reset_cargo_concentration(self, cargo_cytoplasmic_M: float, fraction_bound: float = 0.0) -> None:
         """
@@ -351,7 +351,6 @@ class TransportSimulation:
         self.fraction_complex_NPC_to_free_N_per_M_GTP_per_sec = 0.005e+6  # TODO: this is doubled relative to complex_N to free_N
         self.fraction_complex_N_to_free_N_per_M_GTP_per_sec = 0.005e+6
         self.fraction_complex_NPC_to_complex_N_C_per_sec = 1.0  # Leakage parameter
-        # TODO: look into some missing rates here (GTP_C to GTP_N, GDP_C to GTP_C (these may not happen, but need to investigate))
         self.rate_GDP_N_to_GTP_N_per_sec = 200.0
         self.rate_GTP_N_to_GDP_N_per_sec = 0.2
         self.rate_GTP_C_to_GDP_C_per_sec = 500.0
@@ -407,8 +406,8 @@ class TransportSimulation:
         """                                                                                                        
         Computes the number of complexed cargo molecules (labeled and unlabeled) released from the NPC into the nucleus
         to become free cargo molecules over the dt time step and updates the transition list accordingly
-        (Note: It is assumed each undocking leads to export of a single RanGTP molecule out of the nucleus and list is
-               updated accordingly)
+        (Note: It is assumed each dissociation of cargo from importin uses a single RanGTP molecule and list is updated
+        accordingly)
 
         :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
                        from a molecular species source (src) to the molecular species destination (dst)
@@ -424,7 +423,7 @@ class TransportSimulation:
                 n = f * self.nmol[src]
                 n_GTP += n
                 register_move_nmol(T_list, src=src, dst=dst, nmol=n)
-        register_move_nmol(T_list, src="GTP_N", dst="GTP_C", nmol=n_GTP)
+        register_move_nmol(T_list, src="GTP_N", dst="usedGTP_N", nmol=n_GTP)
 
     @register_update()
     def get_nmol_complex_N_to_free_N(self, T_list: list) -> None:
@@ -432,8 +431,7 @@ class TransportSimulation:
         Computes the number of complexed cargo molecules (labeled and unlabeled) that disassemble in the nucleus over
         the dt time step and updates the transition list accordingly
 
-        #TODO: figure out why GTP is updated here. I think this is passive diffusion and dissociation
-        Note: it is assumed each GTP-dependent undocking leads to export of a single RanGTP molecule instantaneously
+        Note: it is assumed each GTP-dependent undocking uses up  a single RanGTP molecule
 
         :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
                        from a molecular species source (src) to the molecular species destination (dst)
@@ -449,7 +447,7 @@ class TransportSimulation:
         assert n_GTP <= self.nmol["GTP_N"] and nL <= self.nmol["complexL_N"] and nU <= self.nmol["complexU_N"]
         register_move_nmol(T_list, src="complexL_N", dst="freeL_N", nmol=nL)
         register_move_nmol(T_list, src="complexU_N", dst="freeU_N", nmol=nU)
-        register_move_nmol(T_list, src="GTP_N", dst="GTP_C", nmol=n_GTP)
+        register_move_nmol(T_list, src="GTP_N", dst="usedGTP_N", nmol=n_GTP)
 
     @register_update()
     def get_nmol_GDP_N_to_GTP_N(self, T_list: list) -> None:
@@ -481,6 +479,7 @@ class TransportSimulation:
 
     @register_update()
     def get_nmol_GTP_N_to_GTP_C(self, T_list: list) -> None:
+        # TODO: might need to change this
         """
         Computes the number of GTP molecules exported from the nucleus to the cytoplasm over the dt time step and
         updates the transition list accordingly
@@ -577,9 +576,7 @@ class TransportSimulation:
         bound_dock_sites = sum([self.nmol[key] for key in self.nmol if "NPC" in key])
         fraction_bound_dock_sites_NPC = bound_dock_sites / self.NPC_dock_sites
         competition_multiplier = 1.0 - self.passive_competition_weight * fraction_bound_dock_sites_NPC
-        f = self.max_passive_diffusion_rate_nmol_per_sec_per_M \
-            * competition_multiplier \
-            * self.dt_sec
+        f = self.max_passive_diffusion_rate_nmol_per_sec_per_M * competition_multiplier * self.dt_sec
         nL_export = f * self.get_concentration_M("freeL_N")
         nL_import = f * self.get_concentration_M("freeL_C")
         nU_export = f * self.get_concentration_M("freeU_N")
@@ -644,13 +641,12 @@ class TransportSimulation:
         # for bidirectional movement from one side to another very
         # similarly to Fick's law. If we have n1 molecules on one side
         # and n2 molecules on the other, using Delta=(n1-n2) and
-        # tau-1.0/self.fraction_complex_NPC_traverse_per_sec, then
+        # tau=1.0/self.fraction_complex_NPC_traverse_per_sec, then
         # dDelta/dt=Delta/tau, the solution being Delta(t) =
         # Delta(t0)*exp(-t/tau). Let Delta_fractional=exp(-t/tau),
         # then the net fraction of molecules traversing from one side
         # to the other over dt_sec seconds is thus half of (1.0 -
         # Delta_fractional)
-        # TODO: figure out why this one is different than the other ones
         Delta_fractional = np.exp(-self.fraction_complex_NPC_traverse_per_sec * self.dt_sec)
         f = 0.5 * (1 - Delta_fractional)
         #        f= min(f, 0.5) # Note: if f is larger than 0.5, traversal time through NPC >> dt_sec, so we assume it just equilibrates (it can't be rate limiting if all other processes are slow relative to dt_sec) - see TODO above
@@ -708,6 +704,20 @@ class TransportSimulation:
         assert n_free_C <= self.nmol["freeL_C"] and n_complex_C <= self.nmol["complexL_C"]
         register_move_nmol(T_list, src="freeL_C", dst="freeU_C", nmol=n_free_C)
         register_move_nmol(T_list, src="complexL_C", dst="complexU_C", nmol=n_complex_C)
+
+    @register_update()
+    def get_nmol_usedGTP_N_to_GTP_C(self, T_list: list) -> None:
+        """
+        Computed the number of used RanGTP molecules which move back to the cytoplasm and updates the transition list
+        accordingly
+
+        :param T_list: a list of tuples (src, dst, nmol), each representing a transfer of a number of molecules (nmol)
+                       from a molecular species source (src) to the molecular species destination (dst)
+        :return: None
+        """
+        n = self.rate_GTP_N_to_GTP_C_per_sec * self.nmol['usedGTP_N'] * self.dt_sec # TODO: double check this rate
+        register_move_nmol(T_list, src="usedGTP_N", dst="GTP_C", nmol=n)
+
 
     ##########################
     # Individual update rules:
@@ -862,7 +872,7 @@ class TransportSimulation:
         """
         Returns the total number of molecules of RAN_GDP + RAN_GTP in the cell
         """
-        RAN = self.nmol["GDP_C"] + self.nmol["GTP_C"] + self.nmol["GDP_N"] + self.nmol["GTP_N"]
+        RAN = self.nmol["GDP_C"] + self.nmol["GTP_C"] + self.nmol["GDP_N"] + self.nmol["GTP_N"] + self.nmol['usedGTP_N']
         return RAN
 
     def get_total_cargoL_nmol(self) -> float:

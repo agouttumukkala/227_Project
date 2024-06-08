@@ -9,9 +9,7 @@ from numpy import array
 class TestTransport_Simulation(unittest.TestCase):
 
     def test_fL_to_L(self):
-        self.assertAlmostEqual(2e-15,
-                               transport_simulation.fL_to_L(2.0),
-                               delta=1e-18)
+        self.assertAlmostEqual(2e-15, transport_simulation.fL_to_L(2.0), delta=1e-18)
 
     def test_simple_simulation(self):
         # TODO: make this more interesting
@@ -69,7 +67,11 @@ class TestTransport_Simulation(unittest.TestCase):
         #        print(stats)
         for key, expected_v in expected_stats.items():
             for x, y in zip(stats[key], expected_v):
-                self.assertTrue(np.isclose(x, y, atol=1e-12, rtol=1e-5))
+                try:
+                    self.assertTrue(np.isclose(x, y, atol=1e-12, rtol=1e-5))
+                except AssertionError as e:
+                    print(f"Species: {key}\nResult: {x}\tExpected: {y}")
+                    import pdb; pdb.set_trace()
 
     def test_constant_cargo(self, nsteps=1000):
         ts = transport_simulation.TransportSimulation()
