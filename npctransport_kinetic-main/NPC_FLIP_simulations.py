@@ -620,7 +620,7 @@ def get_compartment_concentration_stats(ts: transport_simulation.TransportSimula
     return (nmol_stats / transport_simulation.N_A) / volume_L
 
 
-def get_N_C_ratio_stats(ts: transport_simulation.TransportSimulation, stats, labels: list = ['L', 'U']):
+def get_N_C_ratio_stats(ts: transport_simulation.TransportSimulation, stats: dict, labels: list = ['L', 'U']):
     """
     Calculates the ratio of nuclear cargo concentration to cytoplasmic cargo concentration at every time frame for a
     transport simulation
@@ -701,13 +701,13 @@ def plot_MW_stats_list(stats_list_by_force: dict, TSs_by_force: dict, MW: int, i
         #'complexL_N',
         #'freeL_N'
     ]
-    fig, ax_grid = plt.subplots(7 + len(extras), 3,
+    fig, ax_grid = plt.subplots(6 + len(extras), 3,
                                 figsize=(15,
                                          40.0 + 5.0 * len(extras)),
                                 sharex=False, sharey=False)
     n_NLS = len(stats_list_by_force[False])
     assert (n_NLS == len(stats_list_by_force[True]))
-    ratios = np.ones(shape=(7 + len(extras), n_NLS))
+    ratios = np.ones(shape=(6 + len(extras), n_NLS))
     ax_grid = ax_grid.transpose()
     for axes, is_force in zip(ax_grid[0:2, :], [False, True]):
         for i_NLS, stats in enumerate(stats_list_by_force[is_force]):
@@ -720,13 +720,13 @@ def plot_MW_stats_list(stats_list_by_force: dict, TSs_by_force: dict, MW: int, i
                 2: get_N_C_ratio_stats(ts, stats, labels),
                 3: get_compartment_concentration_stats(ts, stats, 'C', labels),
                 4: get_compartment_concentration_stats(ts, stats, 'N', labels),
-                6: stats['complexL_NPC_N_import'] + stats['complexL_NPC_C_import'] + stats['complexL_NPC_N_export'] +
-                   stats['complexL_NPC_C_export'] + stats['complexU_NPC_C_import'] + stats['complexU_NPC_C_import'] +
-                   stats['complexU_NPC_N_export'] + stats['complexU_NPC_C_export']
+                # 6: stats['complexL_NPC_N_import'] + stats['complexL_NPC_C_import'] + stats['complexL_NPC_N_export'] +
+                #   stats['complexL_NPC_C_export'] + stats['complexU_NPC_C_import'] + stats['complexU_NPC_C_import'] +
+                #   stats['complexU_NPC_N_export'] + stats['complexU_NPC_C_export']
             }
             ys[5] = ys[3] - ys[4]
             for iextra, extra in enumerate(extras):
-                ys[7 + iextra] = stats[extra]
+                ys[6 + iextra] = stats[extra]
             plot_from_frame = int(plot_from_sec / ts.dt_sec)
             for i_row, ax in enumerate(axes):
                 ax.plot(x[plot_from_frame:], ys[i_row][plot_from_frame:], label=get_free_to_complex_rate(i_NLS))
@@ -749,10 +749,10 @@ def plot_MW_stats_list(stats_list_by_force: dict, TSs_by_force: dict, MW: int, i
             axes[4].set_yscale('log')
             axes[5].set_ylabel(r"$\Delta$(C,N) [$M$]")
             axes[5].set_yscale('symlog', linthresh=1e-9)
-            axes[6].set_ylabel('NPC [nmol]')
+            # axes[6].set_ylabel('NPC [nmol]')
             for iextra, extra in enumerate(extras):
-                axes[7 + iextra].set_ylabel(extra)
-                axes[7 + iextra].set_yscale('log')
+                axes[6 + iextra].set_ylabel(extra)
+                axes[6 + iextra].set_yscale('log')
             title = "30 kPa (Stiff)" if is_force else "5 kPa (Soft)"
             axes[0].set_title(title)
 
@@ -1832,6 +1832,7 @@ if __name__ == '__main__':
 
     #  CELL 73:
     ##### TIME CONSUMING #####$
+    """
     simulation_time_sec = 40.0
     n_processors = os.cpu_count()
     MW_to_stats_list_by_force = {}
@@ -1842,11 +1843,12 @@ if __name__ == '__main__':
         plot_MW_stats_list(*(*MW_to_stats_list_by_force[MW], MW, False))
     print("End of cell 73")
     plt.show()
+    """
 
 
     #  CELL 77:
     ##### TIME CONSUMING #####$
-    simulation_time_sec = 40.0
+    simulation_time_sec = 60
     n_processors = os.cpu_count()
     MW_to_stats_list_by_force = {}
     for MW in [27, 41, 54, 67]:
