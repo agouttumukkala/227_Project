@@ -388,11 +388,27 @@ class TransportSimulation:
         self.nmol[
             "nuclear_importL_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentration (dN/dt=rate*[C])
         self.nmol[
+            "nuclear_passiveimportL_per_sec"] = 0  # molar rate of passive raw export to the cytoplasm, given cytoplasmic concentration (dC/dt=rate*[C])
+        self.nmol[
+            "nuclear_activeimportL_per_sec"] = 0  # molar rate of active raw export to the cytoplasm, given cytoplasmic concentration (dC/dt=rate*[C])
+        self.nmol[
             "nuclear_exportL_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentration (dN/dt=rate*[C])
+        self.nmol[
+            "nuclear_passiveexportL_per_sec"] = 0  # molar rate of passive raw export to the cytoplasm, given cytoplasmic concentration (dC/dt=rate*[C])
+        self.nmol[
+            "nuclear_activeexportL_per_sec"] = 0  # molar rate of active raw export to the cytoplasm, given cytoplasmic concentration (dC/dt=rate*[C])
         self.nmol[
             "nuclear_importU_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentration (dN/dt=rate*[N])
         self.nmol[
-            "nuclear_exportU_per_sec"] = 0  # molar rate of raw import to the nucleus, given cytoplasmic concentration (dN/dt=rate*[N])
+            "nuclear_passiveimportU_per_sec"] = 0  # molar rate of passive raw export to the cytoplasm, given cytoplasmic concentration (dC/dt=rate*[C])
+        self.nmol[
+            "nuclear_activeimportU_per_sec"] = 0  # molar rate of active raw export to the cytoplasm, given cytoplasmic concentration (dC/dt=rate*[C])
+        self.nmol[
+            "nuclear_exportU_per_sec"] = 0  # molar rate of raw export to the cytoplasm, given cytoplasmic concentration (dN/dt=rate*[N])
+        self.nmol[
+            "nuclear_passiveexportU_per_sec"] = 0  # molar rate of passive raw export to the cytoplasm, given cytoplasmic concentration (dC/dt=rate*[C])
+        self.nmol[
+            "nuclear_activeexportU_per_sec"] = 0  # molar rate of active raw export to the cytoplasm, given cytoplasmic concentration (dC/dt=rate*[C])
         # Ran in all:
         self.set_RAN_distribution(Ran_cell_M=self.Ran_cell_M,
                                   # total physiological concentration of Ran # TODO: check in the literature
@@ -796,18 +812,33 @@ class TransportSimulation:
                            and "G" not in key])
             if total_N == 0:
                 self.nmol[f"nuclear_export{label}_per_sec"] = 0
+                self.nmol[f"nuclear_passiveexport{label}_per_sec"] = 0
+                self.nmol[f"nuclear_activeexport{label}_per_sec"] = 0
             else:
                 self.nmol[f"nuclear_export{label}_per_sec"] = \
                     (active_export[label] + passive_export[label]) / (
                             total_N * self.dt_sec)  # the rate at which a single nuclear molecule is imported, or equivalently, the ratio between d[N]/dt and [N]
+                self.nmol[f"nuclear_passiveexport{label}_per_sec"] = passive_export[label] / (total_N * self.dt_sec)
+                self.nmol[f"nuclear_activeexport{label}_per_sec"] = active_export[label] / (total_N * self.dt_sec)
+
             if total_C == 0:
                 self.nmol[f"nuclear_import{label}_per_sec"] = 0
+                self.nmol[f"nuclear_passiveimport{label}_per_sec"] = 0
+                self.nmol[f"nuclear_activeimport{label}_per_sec"] = 0
             else:
                 cytoplasmic_import_rate_per_sec = \
                     (active_import[label] + passive_import[label]) / (
                             total_C * self.dt_sec)  # rate at which a single cytoplasmic molecule is imported, or equivalently, the ratio between d[C]/dt and [C]
+                cytoplasmic_active_import_rate_per_sec = active_import[label] / (total_C * self.dt_sec)
+                cytoplasmic_passive_import_rate_per_sec = passive_import[label] / (total_C * self.dt_sec)
                 self.nmol[f"nuclear_import{label}_per_sec"] = \
                     cytoplasmic_import_rate_per_sec * (
+                            self.get_v_C_L() / self.get_v_N_L())  # from d[C]/dt to d[N]/dt as a function of [C]
+                self.nmol[f"nuclear_passiveimport{label}_per_sec"] = \
+                    cytoplasmic_passive_import_rate_per_sec * (
+                            self.get_v_C_L() / self.get_v_N_L())  # from d[C]/dt to d[N]/dt as a function of [C]
+                self.nmol[f"nuclear_activeimport{label}_per_sec"] = \
+                    cytoplasmic_active_import_rate_per_sec * (
                             self.get_v_C_L() / self.get_v_N_L())  # from d[C]/dt to d[N]/dt as a function of [C]
 
     def do_one_time_step(self) -> None:
