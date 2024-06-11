@@ -1097,7 +1097,7 @@ if __name__ == '__main__':
     #  CELL 38:
     importlib.reload(map_param_grid)
 
-    with open("run03/run03.pkl", "rb") as F:
+    with open("Model Results for Paper/run03_baseline.pkl", "rb") as F:
         stats_grids_by_passive, ts_by_passive, param_range = pickle.load(F)
 
     print([f'{state}{label}_N' for state in ['free', 'complex'] for label in ['L', 'U']])
@@ -1832,8 +1832,7 @@ if __name__ == '__main__':
 
     #  CELL 73:
     ##### TIME CONSUMING #####$
-    """
-    simulation_time_sec = 40.0
+    simulation_time_sec = 60
     n_processors = os.cpu_count()
     MW_to_stats_list_by_force = {}
     for MW in [27, 41, 54, 67]:
@@ -1843,7 +1842,6 @@ if __name__ == '__main__':
         plot_MW_stats_list(*(*MW_to_stats_list_by_force[MW], MW, False))
     print("End of cell 73")
     plt.show()
-    """
 
 
     #  CELL 77:
